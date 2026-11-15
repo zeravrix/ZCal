@@ -105,13 +105,14 @@ private fun SingleMacroCard(
 
     Surface(
         modifier = modifier
-            .height(104.dp)
+            .height(112.dp)
             .semantics {
                 contentDescription = "$label: $eatenG of $goalG grams"
             },
         shape = ZCalShapes.Card,
-        color = colors.surface,
-        border = BorderStroke(1.dp, colors.outline)
+        color = colors.surfaceElevated,
+        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
     ) {
         Column(
             modifier = Modifier
@@ -125,7 +126,7 @@ private fun SingleMacroCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(26.dp)
                         .clip(ZCalShapes.Chip)
                         .background(macroColor.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center
@@ -138,22 +139,22 @@ private fun SingleMacroCard(
                 }
                 Text(
                     text = label,
-                    style = ZCalTypeScale.Label,
+                    style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.Medium),
                     color = colors.textSecondary
                 )
             }
 
             Text(
                 text = if (hideNumbers) "•• / ••g" else "${eatenG}g / ${goalG}g",
-                style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.SemiBold),
+                style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.Bold),
                 color = colors.textPrimary
             )
 
-            // 6 dp pill progress bar
+            // 7 dp pill progress bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
+                    .height(7.dp)
                     .clip(ZCalShapes.Pill)
                     .background(colors.surfaceVariant)
             ) {

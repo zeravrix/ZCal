@@ -71,6 +71,8 @@ import app.zcal.domain.usecase.DailyScoreUseCase
 import app.zcal.ui.components.CalorieRingCard
 import app.zcal.ui.components.MacroRowCards
 import app.zcal.ui.components.MealRowCard
+import app.zcal.ui.components.ZCalPrimaryButton
+import app.zcal.ui.components.ZCalSecondaryButton
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
@@ -321,8 +323,9 @@ fun HomeScreen(
                                 .padding(horizontal = 3.dp)
                                 .clickable { viewModel.selectDate(dateStr) },
                             shape = ZCalShapes.Chip,
-                            color = if (isSelected) colors.primary else colors.surface,
-                            border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.outline)
+                            color = if (isSelected) colors.accent else colors.surfaceElevated,
+                            shadowElevation = if (isSelected) 3.dp else 1.dp,
+                            border = BorderStroke(1.dp, if (isSelected) colors.accent else colors.outline)
                         ) {
                             Column(
                                 modifier = Modifier.padding(vertical = 8.dp),
@@ -331,12 +334,12 @@ fun HomeScreen(
                                 Text(
                                     text = date.dayOfWeek.name.take(1),
                                     style = ZCalTypeScale.Label,
-                                    color = if (isSelected) colors.onPrimary else colors.textSecondary
+                                    color = if (isSelected) colors.onAccent else colors.textSecondary
                                 )
                                 Text(
                                     text = date.dayOfMonth.toString(),
                                     style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.Bold),
-                                    color = if (isSelected) colors.onPrimary else colors.textPrimary
+                                    color = if (isSelected) colors.onAccent else colors.textPrimary
                                 )
                             }
                         }
@@ -375,8 +378,9 @@ fun HomeScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = ZCalShapes.Card,
-                    color = colors.surface,
-                    border = BorderStroke(1.dp, colors.outline)
+                    color = colors.surfaceElevated,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -414,8 +418,9 @@ fun HomeScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = ZCalShapes.Card,
-                    color = colors.surface,
-                    border = BorderStroke(1.dp, colors.outline)
+                    color = colors.surfaceElevated,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -468,8 +473,9 @@ fun HomeScreen(
                     Surface(
                         modifier = Modifier.weight(1f),
                         shape = ZCalShapes.Card,
-                        color = colors.surface,
-                        border = BorderStroke(1.dp, colors.outline)
+                        color = colors.surfaceElevated,
+                        shadowElevation = 2.dp,
+                        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(
@@ -500,8 +506,9 @@ fun HomeScreen(
                     Surface(
                         modifier = Modifier.weight(1f),
                         shape = ZCalShapes.Card,
-                        color = colors.surface,
-                        border = BorderStroke(1.dp, colors.outline)
+                        color = colors.surfaceElevated,
+                        shadowElevation = 2.dp,
+                        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(
@@ -548,8 +555,9 @@ fun HomeScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = ZCalShapes.Card,
-                        color = colors.surface,
-                        border = BorderStroke(1.dp, colors.outline)
+                        color = colors.surfaceElevated,
+                        shadowElevation = 2.dp,
+                        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
                     ) {
                         Column(
                             modifier = Modifier
@@ -562,14 +570,12 @@ fun HomeScreen(
                                 style = ZCalTypeScale.Body,
                                 color = colors.textSecondary
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
+                            Spacer(modifier = Modifier.height(14.dp))
+                            ZCalPrimaryButton(
+                                text = "Open Camera Scanner",
                                 onClick = onLaunchCamera,
-                                shape = ZCalShapes.Pill,
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
-                            ) {
-                                Text("Open Camera Main Page", color = colors.onPrimary)
-                            }
+                                modifier = Modifier.fillMaxWidth(0.85f)
+                            )
                         }
                     }
                 }
@@ -691,7 +697,8 @@ private fun ManualMealEntryBottomSheet(
                 )
             }
 
-            Button(
+            ZCalPrimaryButton(
+                text = "Save Meal",
                 onClick = {
                     onSave(
                         name.trim().ifEmpty { "Manual Meal" },
@@ -702,14 +709,8 @@ private fun ManualMealEntryBottomSheet(
                         mealType
                     )
                 },
-                shape = ZCalShapes.Pill,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Text("Save Meal", color = colors.onPrimary, style = ZCalTypeScale.Title)
-            }
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(20.dp))
         }
     }

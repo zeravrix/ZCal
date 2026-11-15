@@ -71,6 +71,8 @@ import app.zcal.domain.model.MealSource
 import app.zcal.domain.model.MealType
 import app.zcal.domain.usecase.AnalyzeMealUseCase
 import app.zcal.ui.components.ConfidenceChip
+import app.zcal.ui.components.ZCalPrimaryButton
+import app.zcal.ui.components.ZCalSecondaryButton
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
@@ -792,28 +794,19 @@ fun ReviewMealScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(
+                ZCalSecondaryButton(
+                    text = "Retake",
                     onClick = onBack,
-                    shape = ZCalShapes.Pill,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp)
-                ) {
-                    Text("Retake")
-                }
-                Button(
+                    modifier = Modifier.weight(1f)
+                )
+                ZCalPrimaryButton(
+                    text = "Save Meal & Sync",
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         viewModel.saveReviewedMeal(onSaved)
                     },
-                    shape = ZCalShapes.Pill,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                    modifier = Modifier
-                        .weight(2f)
-                        .height(52.dp)
-                ) {
-                    Text("Save Meal & Sync", color = colors.onPrimary, style = ZCalTypeScale.Title)
-                }
+                    modifier = Modifier.weight(2f)
+                )
             }
         }
     }

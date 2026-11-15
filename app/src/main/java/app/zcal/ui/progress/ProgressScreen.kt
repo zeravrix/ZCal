@@ -511,10 +511,10 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                         }
                     },
                     shape = ZCalShapes.Pill,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                     modifier = Modifier.height(52.dp)
                 ) {
-                    Text("Log Weight", color = colors.onPrimary)
+                    Text("Log Weight", color = colors.onAccent)
                 }
             }
         }

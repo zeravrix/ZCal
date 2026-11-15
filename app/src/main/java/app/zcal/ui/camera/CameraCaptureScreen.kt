@@ -518,10 +518,10 @@ fun CameraCaptureScreen(
                             Button(
                                 onClick = { reviewViewModel.startManualFallback(userHintNote) },
                                 shape = ZCalShapes.Pill,
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                                colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Edit Manually", color = colors.onPrimary)
+                                Text("Edit Manually", color = colors.onAccent)
                             }
                         }
 

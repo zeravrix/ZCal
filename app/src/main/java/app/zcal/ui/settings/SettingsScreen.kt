@@ -370,9 +370,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                 }
                             },
                             shape = ZCalShapes.Pill,
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
                         ) {
-                            Text("Verify & Save", color = colors.onPrimary)
+                            Text("Verify & Save", color = colors.onAccent)
                         }
                         if (maskedKey != null) {
                             OutlinedButton(

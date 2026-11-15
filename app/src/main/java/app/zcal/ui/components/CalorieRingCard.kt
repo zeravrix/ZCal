@@ -80,8 +80,9 @@ fun CalorieRingCard(
             .fillMaxWidth()
             .semantics { contentDescription = talkBackSummary },
         shape = ZCalShapes.Card,
-        color = colors.surface,
-        border = BorderStroke(1.dp, colors.outline)
+        color = colors.surfaceElevated,
+        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
     ) {
         Column(
             modifier = Modifier.padding(20.dp),

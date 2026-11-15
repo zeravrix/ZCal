@@ -10,6 +10,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -107,7 +109,11 @@ class MainActivity : ComponentActivity() {
                     NavHost(
                         navController = navController,
                         startDestination = startDest,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        enterTransition = { fadeIn(animationSpec = tween(220)) },
+                        exitTransition = { fadeOut(animationSpec = tween(220)) },
+                        popEnterTransition = { fadeIn(animationSpec = tween(220)) },
+                        popExitTransition = { fadeOut(animationSpec = tween(220)) }
                     ) {
                         composable("onboarding") {
                             val onboardingVm: OnboardingViewModel = hiltViewModel()

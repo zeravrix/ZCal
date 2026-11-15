@@ -108,8 +108,9 @@ fun MealRowCard(
             .height(76.dp)
             .clickable(onClick = onClick),
         shape = ZCalShapes.Card,
-        color = colors.surface,
-        border = BorderStroke(1.dp, colors.outline)
+        color = colors.surfaceElevated,
+        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.7f))
     ) {
         Row(
             modifier = Modifier

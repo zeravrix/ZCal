@@ -30,6 +30,7 @@ fun ZCalTheme(
         ZCalExtendedColors(
             canvas = if (useAmoled) ZCalPalette.AmoledCanvas else ZCalPalette.DarkCanvas,
             surface = if (useAmoled) ZCalPalette.AmoledSurface else ZCalPalette.DarkSurface,
+            surfaceElevated = if (useAmoled) ZCalPalette.AmoledSurfaceElevated else ZCalPalette.DarkSurfaceElevated,
             surfaceVariant = ZCalPalette.DarkSurfaceVariant,
             outline = ZCalPalette.DarkOutline,
             textPrimary = ZCalPalette.DarkTextPrimary,
@@ -37,6 +38,10 @@ fun ZCalTheme(
             primary = ZCalPalette.DarkPrimary,
             onPrimary = ZCalPalette.DarkOnPrimary,
             accent = ZCalPalette.DarkAccent,
+            onAccent = ZCalPalette.DarkOnAccent,
+            secondary = ZCalPalette.DarkSecondary,
+            onSecondary = ZCalPalette.DarkOnSecondary,
+            accentGlow = ZCalPalette.DarkAccentGlow,
             protein = ZCalPalette.DarkProtein, // Macro colors never change with wallpaper colors
             carbs = ZCalPalette.DarkCarbs,
             fat = ZCalPalette.DarkFat,
@@ -47,6 +52,7 @@ fun ZCalTheme(
         ZCalExtendedColors(
             canvas = ZCalPalette.LightCanvas,
             surface = ZCalPalette.LightSurface,
+            surfaceElevated = ZCalPalette.LightSurfaceElevated,
             surfaceVariant = ZCalPalette.LightSurfaceVariant,
             outline = ZCalPalette.LightOutline,
             textPrimary = ZCalPalette.LightTextPrimary,
@@ -54,6 +60,10 @@ fun ZCalTheme(
             primary = ZCalPalette.LightPrimary,
             onPrimary = ZCalPalette.LightOnPrimary,
             accent = ZCalPalette.LightAccent,
+            onAccent = ZCalPalette.LightOnAccent,
+            secondary = ZCalPalette.LightSecondary,
+            onSecondary = ZCalPalette.LightOnSecondary,
+            accentGlow = ZCalPalette.LightAccentGlow,
             protein = ZCalPalette.LightProtein,
             carbs = ZCalPalette.LightCarbs,
             fat = ZCalPalette.LightFat,
