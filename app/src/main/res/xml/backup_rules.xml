@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Section 7 Security Rule:
+    Android Keystore AES-GCM master keys never leave the device hardware.
+    Therefore, the encrypted API key DataStore file MUST be excluded from cloud/D2D backups
+    so restored apps do not fail on undecryptable blobs.
+-->
+<full-backup-content>
+    <exclude domain="file" path="datastore/secure_keys.preferences_pb" />
+</full-backup-content>

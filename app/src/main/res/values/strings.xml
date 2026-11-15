@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZCal</string>
+    <string name="widget_name">ZCal Daily Ring &amp; Macros</string>
+    <string name="widget_description">Track remaining calories, P/C/F macros, and launch a one-tap AI meal scan.</string>
+    <string name="disclaimer_not_medical_advice">Estimates only, not medical advice.</string>
+    <string name="privacy_free_tier_disclosure">On Google\'s free tier, your photos and notes may be used to improve Google products. Use a billing-enabled key if you do not want that. Everything else (log, goals, weight) stays on your phone.</string>
+    <string name="open_food_facts_attribution">Barcode product data powered by Open Food Facts (ODbL License).</string>
+</resources>
