@@ -33,6 +33,8 @@ class ProfileRepository @Inject constructor(
     companion object {
         private val KEY_SEX = stringPreferencesKey("sex")
         private val KEY_BIRTH_YEAR = intPreferencesKey("birth_year")
+        private val KEY_BIRTH_MONTH = intPreferencesKey("birth_month")
+        private val KEY_BIRTH_DAY = intPreferencesKey("birth_day")
         private val KEY_HEIGHT_CM = doublePreferencesKey("height_cm")
         private val KEY_WEIGHT_KG = doublePreferencesKey("weight_kg")
         private val KEY_TARGET_WEIGHT_KG = doublePreferencesKey("target_weight_kg")
@@ -65,6 +67,8 @@ class ProfileRepository @Inject constructor(
         UserProfile(
             sex = runCatching { BiologicalSex.valueOf(prefs[KEY_SEX] ?: "MALE") }.getOrDefault(BiologicalSex.MALE),
             birthYear = prefs[KEY_BIRTH_YEAR] ?: 1998,
+            birthMonth = prefs[KEY_BIRTH_MONTH] ?: 1,
+            birthDay = prefs[KEY_BIRTH_DAY] ?: 1,
             heightCm = prefs[KEY_HEIGHT_CM] ?: 178.0,
             weightKg = prefs[KEY_WEIGHT_KG] ?: 75.0,
             targetWeightKg = prefs[KEY_TARGET_WEIGHT_KG] ?: 70.0,
@@ -125,6 +129,8 @@ class ProfileRepository @Inject constructor(
         context.userPrefsDataStore.edit { prefs ->
             prefs[KEY_SEX] = profile.sex.name
             prefs[KEY_BIRTH_YEAR] = profile.birthYear
+            prefs[KEY_BIRTH_MONTH] = profile.birthMonth
+            prefs[KEY_BIRTH_DAY] = profile.birthDay
             prefs[KEY_HEIGHT_CM] = profile.heightCm
             prefs[KEY_WEIGHT_KG] = profile.weightKg
             prefs[KEY_TARGET_WEIGHT_KG] = profile.targetWeightKg

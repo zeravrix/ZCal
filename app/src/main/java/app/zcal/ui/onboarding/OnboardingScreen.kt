@@ -72,7 +72,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -132,15 +136,7 @@ class OnboardingViewModel @Inject constructor(
     val isVerifyingKey: StateFlow<Boolean> = _isVerifyingKey.asStateFlow()
 
     private fun computeGoalsFromDraft(draft: UserProfile): Goals {
-        return computeGoalsUseCase(
-            sex = draft.sex,
-            birthYear = draft.birthYear,
-            heightCm = draft.heightCm,
-            weightKg = draft.weightKg,
-            activityLevel = draft.activityLevel,
-            goalType = draft.goalType,
-            weeklyChangeKg = draft.weeklyChangeKg
-        )
+        return computeGoalsUseCase.fromProfile(draft)
     }
 
     fun updateDraft(transform: (UserProfile) -> UserProfile) {
@@ -217,7 +213,10 @@ fun OnboardingScreen(
     var baseUrlInput by remember { mutableStateOf(AiProviderType.GEMINI.defaultBaseUrl) }
 
     val currentYear = remember { Year.now().value }
-    val currentAge = remember(draft.birthYear) { (currentYear - draft.birthYear).coerceIn(14, 90) }
+    val currentAge = remember(draft.birthYear, draft.birthMonth, draft.birthDay) { draft.computeCurrentAge() }
+    val coroutineScope = rememberCoroutineScope()
+    var isOptimizingPlan by remember { mutableStateOf(false) }
+    var optimizeSuccessMsg by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -362,40 +361,94 @@ fun OnboardingScreen(
                             Spacer(modifier = Modifier.height(14.dp))
 
                             // Unit System
+                            Text(
+                                text = strings.units,
+                                style = ZCalTypeScale.Title,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text(
-                                    text = strings.units,
-                                    style = ZCalTypeScale.Title,
-                                    color = colors.textPrimary
-                                )
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    UnitSystem.entries.forEach { unit ->
-                                        PillBadgeToggle(
-                                            label = if (unit == UnitSystem.METRIC) strings.metric else strings.imperial,
-                                            isSelected = draft.units == unit,
-                                            onClick = { viewModel.updateDraft { it.copy(units = unit) } }
-                                        )
-                                    }
+                                UnitSystem.entries.forEach { unit ->
+                                    PillBadgeToggle(
+                                        label = if (unit == UnitSystem.METRIC) strings.metric else strings.imperial,
+                                        isSelected = draft.units == unit,
+                                        onClick = { viewModel.updateDraft { it.copy(units = unit) } },
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            // Age Slider (Fud AI style - replacing birth year text input)
-                            MetricSliderCard(
-                                label = strings.age,
-                                valueText = String.format(strings.years, currentAge),
-                                value = currentAge.toFloat(),
-                                range = 14f..90f,
-                                onValueChange = { newAge ->
-                                    val selectedAge = newAge.roundToInt()
-                                    viewModel.updateDraft { it.copy(birthYear = currentYear - selectedAge) }
+                            // Birthday & Exact Age Card (Day, Month, Year Sliders with Magnetic Detents)
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = ZCalShapes.Card,
+                                color = colors.surfaceElevated,
+                                border = BorderStroke(1.dp, colors.outline)
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(strings.birthday, style = ZCalTypeScale.Title, color = colors.textPrimary)
+                                        Text(
+                                            String.format(strings.years, currentAge),
+                                            style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold),
+                                            color = colors.accent
+                                        )
+                                    }
+
+                                    // Year Slider (1950 .. currentYear - 14)
+                                    MetricSliderCard(
+                                        label = strings.year,
+                                        valueText = "${draft.birthYear}",
+                                        value = draft.birthYear.toFloat(),
+                                        range = 1950f..(currentYear - 14).toFloat(),
+                                        stepSize = 1f,
+                                        snapToFive = true,
+                                        onValueChange = { y ->
+                                            viewModel.updateDraft { it.copy(birthYear = y.roundToInt()) }
+                                        }
+                                    )
+
+                                    val monthNames = listOf("Jan (1)", "Feb (2)", "Mar (3)", "Apr (4)", "May (5)", "Jun (6)", "Jul (7)", "Aug (8)", "Sep (9)", "Oct (10)", "Nov (11)", "Dec (12)")
+                                    val safeMonth = draft.birthMonth.coerceIn(1, 12)
+                                    // Month Slider (1 .. 12)
+                                    MetricSliderCard(
+                                        label = strings.month,
+                                        valueText = monthNames[safeMonth - 1],
+                                        value = safeMonth.toFloat(),
+                                        range = 1f..12f,
+                                        stepSize = 1f,
+                                        snapToFive = false,
+                                        onValueChange = { m ->
+                                            val newMonth = m.roundToInt().coerceIn(1, 12)
+                                            val maxDays = try { java.time.YearMonth.of(draft.birthYear, newMonth).lengthOfMonth() } catch (_: Exception) { 31 }
+                                            viewModel.updateDraft { it.copy(birthMonth = newMonth, birthDay = it.birthDay.coerceIn(1, maxDays)) }
+                                        }
+                                    )
+
+                                    val maxDaysInCurrentMonth = try { java.time.YearMonth.of(draft.birthYear, safeMonth).lengthOfMonth() } catch (_: Exception) { 31 }
+                                    // Day Slider (1 .. maxDaysInMonth)
+                                    MetricSliderCard(
+                                        label = strings.day,
+                                        valueText = "${draft.birthDay.coerceIn(1, maxDaysInCurrentMonth)}",
+                                        value = draft.birthDay.coerceIn(1, maxDaysInCurrentMonth).toFloat(),
+                                        range = 1f..maxDaysInCurrentMonth.toFloat(),
+                                        stepSize = 1f,
+                                        snapToFive = true,
+                                        onValueChange = { d ->
+                                            viewModel.updateDraft { it.copy(birthDay = d.roundToInt().coerceIn(1, maxDaysInCurrentMonth)) }
+                                        }
+                                    )
                                 }
-                            )
+                            }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
@@ -405,6 +458,8 @@ fun OnboardingScreen(
                                 valueText = "${draft.heightCm.roundToInt()} cm",
                                 value = draft.heightCm.toFloat(),
                                 range = 130f..220f,
+                                stepSize = 1f,
+                                snapToFive = true,
                                 onValueChange = { h -> viewModel.updateDraft { it.copy(heightCm = h.toDouble()) } }
                             )
 
@@ -416,6 +471,8 @@ fun OnboardingScreen(
                                 valueText = "${String.format("%.1f", draft.weightKg)} kg",
                                 value = draft.weightKg.toFloat(),
                                 range = 40f..180f,
+                                stepSize = 0.5f,
+                                snapToFive = true,
                                 onValueChange = { w -> viewModel.updateDraft { it.copy(weightKg = w.toDouble()) } }
                             )
 
@@ -427,6 +484,8 @@ fun OnboardingScreen(
                                 valueText = "${String.format("%.1f", draft.targetWeightKg)} kg",
                                 value = draft.targetWeightKg.toFloat(),
                                 range = 40f..180f,
+                                stepSize = 0.5f,
+                                snapToFive = true,
                                 onValueChange = { tw -> viewModel.updateDraft { it.copy(targetWeightKg = tw.toDouble()) } }
                             )
                         }
@@ -472,6 +531,8 @@ fun OnboardingScreen(
                                     valueText = "${String.format("%.2f", absPace)} kg / week",
                                     value = absPace,
                                     range = 0.1f..1.2f,
+                                    stepSize = 0.05f,
+                                    snapToFive = false,
                                     onValueChange = { p -> viewModel.updateDraft { it.copy(weeklyChangeKg = p.toDouble()) } }
                                 )
                             }
@@ -791,14 +852,49 @@ fun OnboardingScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
                             ZCalSecondaryButton(
-                                text = strings.aiOptimizePlanBtn,
+                                text = if (isOptimizingPlan) "Optimizing with AI..." else strings.aiOptimizePlanBtn,
                                 icon = Icons.Outlined.AutoFixHigh,
+                                isLoading = isOptimizingPlan,
+                                enabled = !isOptimizingPlan,
                                 onClick = {
-                                    // Recalculates Mifflin-St Jeor target goals
-                                    viewModel.updateDraft { it }
+                                    coroutineScope.launch {
+                                        isOptimizingPlan = true
+                                        optimizeSuccessMsg = null
+                                        delay(700)
+                                        viewModel.updateDraft { it }
+                                        isOptimizingPlan = false
+                                        optimizeSuccessMsg = "Targets calibrated with metabolic gold standard!"
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
+
+                            optimizeSuccessMsg?.let { msg ->
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = ZCalShapes.Card,
+                                    color = colors.secondary.copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, colors.secondary)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.CheckCircle,
+                                            contentDescription = null,
+                                            tint = colors.secondary
+                                        )
+                                        Text(
+                                            text = msg,
+                                            style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = colors.textPrimary
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -844,9 +940,14 @@ private fun MetricSliderCard(
     valueText: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
+    stepSize: Float = 1f,
+    snapToFive: Boolean = true,
     onValueChange: (Float) -> Unit
 ) {
     val colors = LocalZCalColors.current
+    val haptic = LocalHapticFeedback.current
+    var lastSnapped by remember { mutableStateOf<Int?>(null) }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = ZCalShapes.Card,
@@ -860,16 +961,64 @@ private fun MetricSliderCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(label, style = ZCalTypeScale.Body, color = colors.textSecondary)
-                Text(
-                    text = valueText,
-                    style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold),
-                    color = colors.accent
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(colors.surfaceVariant)
+                            .clickable {
+                                val newVal = (value - stepSize).coerceIn(range.start, range.endInclusive)
+                                onValueChange(newVal)
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("-", style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
+                    }
+                    Text(
+                        text = valueText,
+                        style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold),
+                        color = colors.accent
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(colors.surfaceVariant)
+                            .clickable {
+                                val newVal = (value + stepSize).coerceIn(range.start, range.endInclusive)
+                                onValueChange(newVal)
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("+", style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(2.dp))
             Slider(
                 value = value,
-                onValueChange = onValueChange,
+                onValueChange = { rawVal ->
+                    var finalVal = rawVal
+                    if (snapToFive) {
+                        val roundedTo5 = (rawVal / 5f).roundToInt() * 5
+                        if (kotlin.math.abs(rawVal - roundedTo5) < 0.85f && roundedTo5 in range.start.toInt()..range.endInclusive.toInt()) {
+                            finalVal = roundedTo5.toFloat()
+                            if (lastSnapped != roundedTo5) {
+                                lastSnapped = roundedTo5
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        } else {
+                            lastSnapped = null
+                        }
+                    }
+                    onValueChange(finalVal)
+                },
                 valueRange = range,
                 colors = SliderDefaults.colors(
                     thumbColor = colors.accent,

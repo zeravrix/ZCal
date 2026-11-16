@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Icon
@@ -80,8 +82,36 @@ class SettingsViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
     private val mealRepository: MealRepository,
     private val keyVault: KeyVault,
-    private val foodAnalyzer: FoodAnalyzer
+    private val foodAnalyzer: FoodAnalyzer,
+    private val computeGoalsUseCase: app.zcal.domain.usecase.ComputeGoalsUseCase
 ) : ViewModel() {
+
+    fun updateBodyMetrics(
+        weightKg: Double,
+        heightCm: Double,
+        targetWeightKg: Double
+    ) {
+        viewModelScope.launch {
+            val current = userProfile.value
+            val updated = current.copy(
+                weightKg = weightKg,
+                heightCm = heightCm,
+                targetWeightKg = targetWeightKg
+            )
+            val goals = computeGoalsUseCase.fromProfile(updated)
+            val finalProfile = updated.copy(
+                calorieGoal = goals.dailyCalories,
+                kilojouleGoal = goals.dailyKilojoules,
+                proteinGoalG = goals.proteinG,
+                carbsGoalG = goals.carbsG,
+                fatGoalG = goals.fatG,
+                claGoalMg = goals.claMg,
+                fiberGoalG = goals.fiberG
+            )
+            profileRepository.saveUserProfile(finalProfile)
+            _verifyMessage.value = "Body metrics & metabolic targets updated!"
+        }
+    }
 
     val userProfile: StateFlow<UserProfile> = profileRepository.userProfileFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserProfile())
@@ -323,26 +353,39 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         Text(strings.language, style = ZCalTypeScale.Title, color = colors.textPrimary)
                     }
 
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AppLanguage.entries.forEach { lang ->
-                            val isSel = appLang == lang
-                            Surface(
-                                modifier = Modifier
-                                    .clip(ZCalShapes.Pill)
-                                    .clickable { viewModel.setLanguage(lang) },
-                                shape = ZCalShapes.Pill,
-                                color = if (isSel) colors.accent else colors.surfaceVariant,
-                                border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
-                            ) {
-                                Text(
-                                    text = "${lang.nativeTitle} (${lang.title})",
-                                    style = ZCalTypeScale.Label.copy(fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal),
-                                    color = if (isSel) colors.onAccent else colors.textPrimary,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                                )
+                    AppLanguage.entries.chunked(2).forEach { rowPair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowPair.forEach { lang ->
+                                val isSel = appLang == lang
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(42.dp)
+                                        .clip(ZCalShapes.Pill)
+                                        .clickable { viewModel.setLanguage(lang) },
+                                    shape = ZCalShapes.Pill,
+                                    color = if (isSel) colors.accent else colors.surfaceVariant,
+                                    border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
+                                ) {
+                                    androidx.compose.foundation.layout.Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = "${lang.nativeTitle} (${lang.title})",
+                                            style = ZCalTypeScale.Label.copy(
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 12.sp
+                                            ),
+                                            color = if (isSel) colors.onAccent else colors.textPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -366,17 +409,39 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         color = colors.textSecondary
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         AiProviderType.entries.forEach { p ->
-                            FilterChip(
-                                selected = provider == p,
-                                onClick = {
-                                    modelEdit = p.defaultModel
-                                    baseUrlEdit = p.defaultBaseUrl
-                                    viewModel.saveAndVerifyProviderKey(p, "", p.defaultModel, p.defaultBaseUrl)
-                                },
-                                label = { Text(p.displayName) }
-                            )
+                            val isSel = provider == p
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp)
+                                    .clip(ZCalShapes.Pill)
+                                    .clickable {
+                                        modelEdit = p.defaultModel
+                                        baseUrlEdit = p.defaultBaseUrl
+                                        viewModel.saveAndVerifyProviderKey(p, "", p.defaultModel, p.defaultBaseUrl)
+                                    },
+                                shape = ZCalShapes.Pill,
+                                color = if (isSel) colors.accent else colors.surfaceVariant,
+                                border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
+                            ) {
+                                androidx.compose.foundation.layout.Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Text(
+                                        p.displayName,
+                                        style = ZCalTypeScale.Label.copy(
+                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
+                                        ),
+                                        color = if (isSel) colors.onAccent else colors.textPrimary
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -429,7 +494,10 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Button(
                             onClick = {
                                 viewModel.saveAndVerifyProviderKey(provider, keyInput, modelEdit, baseUrlEdit) { ok ->
@@ -437,14 +505,16 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                 }
                             },
                             shape = ZCalShapes.Pill,
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
+                            modifier = Modifier.weight(1f).height(46.dp)
                         ) {
                             Text(strings.verifyAndSaveBtn, color = colors.onAccent)
                         }
                         if (maskedKey != null) {
                             OutlinedButton(
                                 onClick = { viewModel.removeCurrentKey() },
-                                shape = ZCalShapes.Pill
+                                shape = ZCalShapes.Pill,
+                                modifier = Modifier.weight(1f).height(46.dp)
                             ) {
                                 Text(strings.removeKeyBtn)
                             }
@@ -518,6 +588,70 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             }
         }
 
+        // Body Measurements & Long-Term Metabolic Target Recalculation
+        item {
+            var editWeight by remember(profile.weightKg) { mutableStateOf(profile.weightKg.toString()) }
+            var editHeight by remember(profile.heightCm) { mutableStateOf(profile.heightCm.roundToInt().toString()) }
+            var editTargetWeight by remember(profile.targetWeightKg) { mutableStateOf(profile.targetWeightKg.toString()) }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ZCalShapes.Card,
+                color = colors.surface,
+                border = BorderStroke(1.dp, colors.outline)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(strings.bodyMetricsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    Text(
+                        text = "Current: ${profile.weightKg} kg • ${profile.heightCm.roundToInt()} cm • Calorie Target: %,d kcal".format(profile.calorieGoal),
+                        style = ZCalTypeScale.BodySmall,
+                        color = colors.textSecondary
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = editWeight,
+                            onValueChange = { editWeight = it },
+                            label = { Text(strings.weightLabel) },
+                            modifier = Modifier.weight(1f),
+                            shape = ZCalShapes.Input
+                        )
+                        OutlinedTextField(
+                            value = editHeight,
+                            onValueChange = { editHeight = it },
+                            label = { Text(strings.heightLabel) },
+                            modifier = Modifier.weight(1f),
+                            shape = ZCalShapes.Input
+                        )
+                        OutlinedTextField(
+                            value = editTargetWeight,
+                            onValueChange = { editTargetWeight = it },
+                            label = { Text(strings.targetWeightLabel) },
+                            modifier = Modifier.weight(1f),
+                            shape = ZCalShapes.Input
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            val w = editWeight.toDoubleOrNull() ?: profile.weightKg
+                            val h = editHeight.toDoubleOrNull() ?: profile.heightCm
+                            val tw = editTargetWeight.toDoubleOrNull() ?: profile.targetWeightKg
+                            viewModel.updateBodyMetrics(w, h, tw)
+                        },
+                        shape = ZCalShapes.Pill,
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text(strings.updateTargetsBtn, color = colors.onAccent, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         // 3. Appearance (Light, Dark, AMOLED Pure Black, Material You, Calm Palette)
         item {
             Surface(
@@ -529,19 +663,43 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(strings.themeAndDisplayTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ThemePreference.entries.forEach { t ->
-                            val themeLabel = when(t) {
-                                ThemePreference.SYSTEM -> strings.system
-                                ThemePreference.LIGHT -> strings.light
-                                ThemePreference.DARK -> strings.dark
-                                ThemePreference.AMOLED -> strings.amoled
+                    ThemePreference.entries.chunked(2).forEach { rowPair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowPair.forEach { t ->
+                                val themeLabel = when(t) {
+                                    ThemePreference.SYSTEM -> strings.system
+                                    ThemePreference.LIGHT -> strings.light
+                                    ThemePreference.DARK -> strings.dark
+                                    ThemePreference.AMOLED -> strings.amoled
+                                }
+                                val isSel = themePref == t
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(40.dp)
+                                        .clip(ZCalShapes.Pill)
+                                        .clickable { viewModel.setTheme(t) },
+                                    shape = ZCalShapes.Pill,
+                                    color = if (isSel) colors.accent else colors.surfaceVariant,
+                                    border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
+                                ) {
+                                    androidx.compose.foundation.layout.Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Text(
+                                            themeLabel,
+                                            style = ZCalTypeScale.Label.copy(
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
+                                            ),
+                                            color = if (isSel) colors.onAccent else colors.textPrimary
+                                        )
+                                    }
+                                }
                             }
-                            FilterChip(
-                                selected = themePref == t,
-                                onClick = { viewModel.setTheme(t) },
-                                label = { Text(themeLabel) }
-                            )
                         }
                     }
 
@@ -586,18 +744,21 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(strings.dataAndAttributionTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         OutlinedButton(
                             onClick = { viewModel.exportJsonBackup(context) },
                             shape = ZCalShapes.Pill,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).height(46.dp)
                         ) {
                             Text(strings.exportBackupBtn)
                         }
                         OutlinedButton(
                             onClick = { viewModel.resetAllData() },
                             shape = ZCalShapes.Pill,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).height(46.dp)
                         ) {
                             Text(strings.resetLogBtn, color = colors.error)
                         }

@@ -90,7 +90,10 @@ object DateHelpers {
         return streak
     }
 
-    fun computeBestStreak(summaries: List<DaySummary>): Int {
+    fun computeBestStreak(
+        summaries: List<DaySummary>,
+        forgiveOneMissedDayPerWeek: Boolean = false
+    ): Int {
         val sortedDates = summaries
             .filter { it.mealCount > 0 }
             .map { parseLocalDate(it.localDate) }
@@ -98,14 +101,33 @@ object DateHelpers {
             .sorted()
 
         if (sortedDates.isEmpty()) return 0
+        val dateSet = sortedDates.map { it.format(ISO_DATE) }.toSet()
+        val minDate = sortedDates.first()
+        val maxDate = sortedDates.last()
+
         var best = 1
-        var current = 1
-        for (i in 1 until sortedDates.size) {
-            if (sortedDates[i - 1].plusDays(1) == sortedDates[i]) {
+        var current = 0
+        var missesInWindow = 0
+        var daysInWindow = 0
+
+        var cursor = minDate
+        while (!cursor.isAfter(maxDate)) {
+            val key = cursor.format(ISO_DATE)
+            if (dateSet.contains(key)) {
                 current++
                 if (current > best) best = current
+            } else if (forgiveOneMissedDayPerWeek && missesInWindow == 0 && current > 0) {
+                missesInWindow++
             } else {
-                current = 1
+                current = 0
+                missesInWindow = 0
+                daysInWindow = 0
+            }
+            cursor = cursor.plusDays(1)
+            daysInWindow++
+            if (daysInWindow >= 7) {
+                daysInWindow = 0
+                missesInWindow = 0
             }
         }
         return best

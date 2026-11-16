@@ -9,6 +9,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.network.sockets.SocketTimeoutException as KtorSocketTimeoutException
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -138,18 +139,31 @@ class MultiProviderFoodAnalyzer @Inject constructor(
             return KeyVerificationResult.Invalid("API key cannot be empty.")
         }
         val provider = keyVault.activeProviderFlow.first()
-        if (!modelId.trim().equals(ModelSelector.AUTO, ignoreCase = true)) {
-            return probeModel(provider, trimmedKey, baseUrl, modelId)
+        val defaultModelToTest = if (!modelId.trim().equals(ModelSelector.AUTO, ignoreCase = true) && modelId.isNotBlank()) {
+            modelId.trim()
+        } else {
+            provider.defaultModel
         }
 
-        // "auto": list what THIS key can use, rank it for food-photo work, and prove the winner with a real call.
-        // A model can be listed yet unusable on a free key (limit 0), so try the best three before giving up.
+        // Fast-path: probe the primary model directly in one quick HTTP call (< 600ms)
+        val fastResult = probeModel(provider, trimmedKey, baseUrl, defaultModelToTest)
+        if (fastResult is KeyVerificationResult.Valid) {
+            keyVault.saveResolvedModel(provider, defaultModelToTest)
+            return fastResult
+        }
+        val err = (fastResult as KeyVerificationResult.Invalid).errorMessage
+        if (err.startsWith("HTTP 401") || err.startsWith("HTTP 403") || err.contains("API key", ignoreCase = true)) {
+            return fastResult
+        }
+
+        // Fallback for custom or enterprise keys where default model might not be enabled
         val ids = fetchModelIds(provider, trimmedKey, baseUrl)
         val allowPreview = keyVault.allowPreviewModelsFlow.first()
         val ranked = ids?.let { ModelSelector.rank(provider, it, allowPreview) }.orEmpty()
-        val candidates = (ranked.take(3) + provider.fallbackModel).distinct()
-        var last: KeyVerificationResult = KeyVerificationResult.Invalid("No usable model found for this key.")
+        val candidates = (ranked.take(2) + provider.fallbackModel).distinct()
+        var last: KeyVerificationResult = fastResult
         for (candidate in candidates) {
+            if (candidate == defaultModelToTest) continue
             when (val res = probeModel(provider, trimmedKey, baseUrl, candidate)) {
                 is KeyVerificationResult.Valid -> {
                     if (candidate in ranked) keyVault.saveResolvedModel(provider, candidate)
@@ -260,6 +274,11 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                     header("x-goog-api-key", trimmedKey)
                     contentType(ContentType.Application.Json)
                     setBody(payload.toString())
+                    timeout {
+                        requestTimeoutMillis = 8_000L
+                        connectTimeoutMillis = 4_000L
+                        socketTimeoutMillis = 8_000L
+                    }
                 }
             } else {
                 val cleanBase = baseUrl.trimEnd('/').ifEmpty { AiProviderType.OPENAI_COMPATIBLE.defaultBaseUrl }
@@ -278,6 +297,11 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                     header("Authorization", "Bearer $trimmedKey")
                     contentType(ContentType.Application.Json)
                     setBody(payload.toString())
+                    timeout {
+                        requestTimeoutMillis = 8_000L
+                        connectTimeoutMillis = 4_000L
+                        socketTimeoutMillis = 8_000L
+                    }
                 }
             }
 

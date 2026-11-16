@@ -5,7 +5,7 @@
   <br>
   <b>Open-source, private, camera-first AI nutrition tracker for Android.</b>
   <br>
-  <i>No subscriptions. No private backend. Bring your own AI key (BYOK).</i>
+  <i>No subscriptions. No private backend. Bring your own AI key (BYOK). Version 1.2.0.</i>
 </p>
 
 ---
@@ -14,29 +14,35 @@
 
 **ZCal** is an Android-first calorie, kilojoule, and macro tracking application designed with a **Camera-First** architecture. Point your camera at any meal, and the on-device AI pipeline estimates portions, calories, and macronutrients in seconds.
 
-Inspired by popular apps like Cal AI, Cal+, and Fud AI, ZCal differs in one fundamental way: **there is zero recurring cost and zero data tracking**. Users supply their own API key (Google Gemini free-tier by default, or OpenAI / OpenRouter / local Ollama). Food logs stay exclusively on your device.
+Inspired by modern food tracking apps like Cal AI and Fud AI, ZCal differs in one fundamental way: **zero recurring cost, zero telemetry, and zero privacy compromises**. Users supply their own API key (Google Gemini free tier or OpenAI / OpenRouter / Ollama). Food logs stay exclusively on your device in a local Room database, and API keys are stored in the hardware **Android Keystore** (`AES/GCM/NoPadding`).
 
-- **Primary Brand Theme**: `#23212C` (Luxury Slate Obsidian) with native Material 3, Dark Mode, and AMOLED Pure Black support.
-- **Tabular Figures (`tnum`)**: All numeric readouts and animated counters are formatted with tabular numbers to prevent horizontal layout shift.
-- **Privacy By Default**: All meal entries, weights, and goals live in a local Room database. API keys are encrypted inside the hardware **Android Keystore** (`AES/GCM/NoPadding`).
+- **Theme Palette**: Luxury Obsidian Slate (`#23212C`) with calm off-white accents, native Material 3, Dark Mode, and AMOLED Pure Black support.
+- **Hardware Notch & Display Cutout**: True edge-to-edge rendering with window background color matching to eliminate ugly white notch gaps.
+- **Stateless AI Vision Pipeline**: Single-turn requests with no chat memory or image retention overhead, keeping token usage minimal.
+- **Multilingual Support**: Fully localized across 8 languages (English, Arabic with RTL, French, Spanish, German, Japanese, Chinese, Korean).
 
 ---
 
 ## Key Features
 
 1. **Camera-First Workflow (`CameraCaptureScreen.kt`)**:
-   - Launches directly into a CameraX viewfinder with a live heads-up display (HUD) showing remaining `kcal` & `kJ`, `Protein`, `Fat`, `CLA`, and real-time step counts.
+   - Launches directly into a CameraX viewfinder with a sleek floating glassmorphic heads-up display (HUD).
+   - Real-time remaining `kcal` & `kJ`, `Protein`, `Carbs`, `Fat`, and step counts with quick flash and food cache shortcuts.
    - Built-in ML Kit Barcode Scanner backed by **Open Food Facts** data with local caching.
-2. **Spring-Animated Macro Breakdown (`ReviewMealScreen.kt`)**:
-   - Smoothly counts up calories and kilojoules (`kcal × 4.184`) with bouncy physics progress bars for Protein, Carbs, Fat, and CLA.
-   - Live portion multiplier pills (`0.5x`, `1x`, `1.5x`, `2x`) and a natural-language "Fix with AI" refinement dialog.
-3. **Automated Best-Model Selection (`ModelSelector.kt`)**:
-   - Auto-discovers and ranks the optimal vision model for food photo estimation (prioritizing low-latency Flash-tier models).
-4. **Health Connect & Sensor Sync (`HealthConnectManager.kt`)**:
-   - Bi-directional sync with Android Health Connect for steps, burn, and logged meals, backed by a hardware step counter sensor fallback.
-5. **Monthly Auto-Purging Image Cache (`FoodHistoryCacheManager.kt`)**:
+2. **Magnetic Snapping Sliders (`MetricSliderCard`)**:
+   - Fluid sliders with magnetic detents and haptic feedback on multiples of 5 and 0 (e.g. 60, 65, 70, 75) plus `-` / `+` precision step buttons.
+3. **Full Birthday & Long-Term Health Tracking**:
+   - Day, Month, and Year sliders for exact birthday input.
+   - Exact age detection using `java.time.Period` with automatic metabolic target recalculation (Mifflin-St Jeor gold standard) when age advances or body measurements change.
+   - Body Measurements card in Settings to update weight and height anytime.
+4. **Spring-Animated Macro Breakdown (`ReviewMealScreen.kt`)**:
+   - Bouncy physics progress bars for Protein, Carbs, Fat, and CLA.
+   - Live portion multiplier pills (`0.5x`, `1x`, `1.5x`, `2x`) and stateless "Fix with AI" refinement dialog.
+5. **BYOK Fast Verification & Model Selection**:
+   - Direct lightweight single-turn verification (<600ms) with an 8-second network timeout.
+6. **Monthly Auto-Purging Image Cache (`FoodHistoryCacheManager.kt`)**:
    - Automatic 30-day / monthly rollover cleanup of food photos to preserve device storage while keeping permanent aggregated day summaries.
-6. **Glance Home-Screen Widget (`ZCalGlanceWidget.kt`)**:
+7. **Glance Home-Screen Widget (`ZCalGlanceWidget.kt`)**:
    - Real-time 4×2 home screen widget showing daily calories, macros, and instant scan shortcuts.
 
 ---
@@ -60,7 +66,7 @@ Inspired by popular apps like Cal AI, Cal+, and Fud AI, ZCal differs in one fund
 
 ### Prerequisites
 - Android Studio Ladybug (2024.2.1+) or newer
-- JDK 17 or JDK 21
+- JDK 21
 - Android SDK Platform 35 (`minSdk = 26`, `targetSdk = 35`)
 
 ### Building from Source
@@ -76,7 +82,7 @@ cd ZCal
 # Build debug APK
 ./gradlew assembleDebug
 
-# Build optimized release APK (version 1.0.0)
+# Build optimized release APK (version 1.2.0)
 ./gradlew assembleRelease
 ```
 

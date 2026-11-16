@@ -6,7 +6,9 @@ import app.zcal.domain.model.EnergyConversion
 import app.zcal.domain.model.GoalType
 import app.zcal.domain.model.Goals
 import app.zcal.domain.model.PeriodTargetBreakdown
+import app.zcal.domain.model.UserProfile
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -27,9 +29,17 @@ class ComputeGoalsUseCase @Inject constructor() {
         weeklyChangeKg: Double,
         proteinPerKg: Double = 1.8,
         fatCalorieShare: Double = 0.25,
-        currentYear: Int = LocalDate.now().year
+        currentYear: Int = LocalDate.now().year,
+        birthMonth: Int = 1,
+        birthDay: Int = 1,
+        today: LocalDate = LocalDate.now()
     ): Goals {
-        val age = (currentYear - birthYear).coerceIn(14, 100)
+        val safeMonth = birthMonth.coerceIn(1, 12)
+        val maxDays = try { YearMonth.of(birthYear, safeMonth).lengthOfMonth() } catch (_: Exception) { 31 }
+        val safeDay = birthDay.coerceIn(1, maxDays)
+        val birthDate = try { LocalDate.of(birthYear, safeMonth, safeDay) } catch (_: Exception) { LocalDate.of(birthYear, 1, 1) }
+        val exactAge = java.time.Period.between(birthDate, today).years
+        val age = if (exactAge > 0) exactAge.coerceIn(14, 100) else (currentYear - birthYear).coerceIn(14, 100)
 
         // 1. BMR (Mifflin-St Jeor)
         val sexOffset = when (sex) {
@@ -111,4 +121,17 @@ class ComputeGoalsUseCase @Inject constructor() {
             rapidPaceWarning = paceWarning
         )
     }
+
+    fun fromProfile(profile: UserProfile, today: LocalDate = LocalDate.now()): Goals = invoke(
+        sex = profile.sex,
+        birthYear = profile.birthYear,
+        birthMonth = profile.birthMonth,
+        birthDay = profile.birthDay,
+        heightCm = profile.heightCm,
+        weightKg = profile.weightKg,
+        activityLevel = profile.activityLevel,
+        goalType = profile.goalType,
+        weeklyChangeKg = profile.weeklyChangeKg,
+        today = today
+    )
 }

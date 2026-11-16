@@ -23,6 +23,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -315,65 +318,124 @@ fun CameraCaptureScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .displayCutoutPadding()
-                        .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                        .padding(top = 10.dp, start = 16.dp, end = 16.dp)
                         .align(Alignment.TopCenter),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Sleek floating glassmorphic HUD pill
                     Surface(
-                        shape = ZCalShapes.Card,
-                        color = Color.Black.copy(alpha = 0.68f),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                        shape = ZCalShapes.Pill,
+                        color = colors.canvas.copy(alpha = 0.88f),
+                        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.5f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "%,d kcal • %,d kJ left".format(leftKcal, leftKj),
-                                        style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(colors.accent)
                                     )
                                     Text(
-                                        text = "P ${(summary?.proteinG ?: 0.0).roundToInt()}g • F ${(summary?.fatG ?: 0.0).roundToInt()}g • CLA ${(summary?.claMg ?: 0.0).roundToInt()}mg",
-                                        style = ZCalTypeScale.Label,
-                                        color = Color.White.copy(alpha = 0.85f)
+                                        text = "%,d kcal left".format(leftKcal),
+                                        style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                                        color = colors.textPrimary
                                     )
                                 }
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = onOpenHistoryCache) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.History,
-                                            contentDescription = "Monthly Food Image Cache",
-                                            tint = Color.White
-                                        )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(colors.protein))
+                                        Text("P ${(summary?.proteinG ?: 0.0).roundToInt()}g", style = ZCalTypeScale.Label.copy(fontSize = 11.sp), color = colors.textSecondary)
                                     }
-                                    IconButton(
-                                        onClick = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(colors.carbs))
+                                        Text("C ${(summary?.carbsG ?: 0.0).roundToInt()}g", style = ZCalTypeScale.Label.copy(fontSize = 11.sp), color = colors.textSecondary)
+                                    }
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(colors.fat))
+                                        Text("F ${(summary?.fatG ?: 0.0).roundToInt()}g", style = ZCalTypeScale.Label.copy(fontSize = 11.sp), color = colors.textSecondary)
+                                    }
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.surfaceVariant)
+                                        .clickable { onOpenHistoryCache() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.History,
+                                        contentDescription = "Monthly Food Image Cache",
+                                        tint = colors.textPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(if (flashEnabled) colors.accent else colors.surfaceVariant)
+                                        .clickable {
                                             flashEnabled = !flashEnabled
                                             imageCapture.flashMode = if (flashEnabled) {
                                                 ImageCapture.FLASH_MODE_ON
                                             } else {
                                                 ImageCapture.FLASH_MODE_OFF
                                             }
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = if (flashEnabled) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-                                            contentDescription = "Toggle Flash",
-                                            tint = Color.White
-                                        )
-                                    }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (flashEnabled) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                                        contentDescription = "Toggle Flash",
+                                        tint = if (flashEnabled) colors.onAccent else colors.textPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
+                        }
+                    }
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                    if (healthSteps.steps > 0) {
+                        Surface(
+                            shape = ZCalShapes.Pill,
+                            color = colors.canvas.copy(alpha = 0.82f),
+                            border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.4f)),
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
                             Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
@@ -381,17 +443,15 @@ fun CameraCaptureScreen(
                                     imageVector = Icons.AutoMirrored.Outlined.DirectionsWalk,
                                     contentDescription = null,
                                     tint = colors.accent,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = "%,d steps (%d kcal / %d kJ burned • %s)".format(
+                                    text = "%,d steps (%d kcal burned)".format(
                                         healthSteps.steps,
-                                        healthSteps.activeBurnKcal,
-                                        healthSteps.activeBurnKj,
-                                        healthSteps.sourceLabel
+                                        healthSteps.activeBurnKcal
                                     ),
-                                    style = ZCalTypeScale.Label,
-                                    color = colors.accent
+                                    style = ZCalTypeScale.Label.copy(fontSize = 11.sp),
+                                    color = colors.textPrimary
                                 )
                             }
                         }

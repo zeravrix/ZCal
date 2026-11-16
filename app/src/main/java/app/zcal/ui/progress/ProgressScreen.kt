@@ -199,6 +199,7 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
     val yearMonth by viewModel.selectedYearMonth.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val calmPalette by viewModel.calmPalette.collectAsState()
+    val forgiveOneDay by viewModel.forgiveOneDay.collectAsState()
     val hideNumbers by viewModel.hideNumbers.collectAsState()
     val summaries by viewModel.monthSummaries.collectAsState()
     val prevSummaries by viewModel.prevMonthSummaries.collectAsState()
@@ -231,7 +232,7 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
     val proteinHitDays = completeDays.count {
         it.proteinG >= (profile.proteinGoalG * 0.90)
     }
-    val bestStreak = DateHelpers.computeBestStreak(loggedDays)
+    val bestStreak = DateHelpers.computeBestStreak(loggedDays, forgiveOneDay)
 
     val smoothedWeights = remember(weights) {
         viewModel.adaptiveTdeeUseCase.computeSmoothedWeightSeries(weights)
@@ -418,23 +419,52 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                     border = BorderStroke(1.dp, colors.outline)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(strings.topFoodsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                FilterChip(
-                                    selected = !showTopByProtein,
-                                    onClick = { showTopByProtein = false },
-                                    label = { Text(strings.byCaloriesLabel) }
-                                )
-                                FilterChip(
-                                    selected = showTopByProtein,
-                                    onClick = { showTopByProtein = true },
-                                    label = { Text(strings.byProteinLabel) }
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    modifier = Modifier.weight(1f).height(36.dp),
+                                    shape = ZCalShapes.Pill,
+                                    color = if (!showTopByProtein) colors.accent else colors.surfaceVariant,
+                                    border = BorderStroke(1.dp, if (!showTopByProtein) colors.accent else colors.outline),
+                                    onClick = { showTopByProtein = false }
+                                ) {
+                                    androidx.compose.foundation.layout.Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Text(
+                                            strings.byCaloriesLabel,
+                                            style = ZCalTypeScale.Label.copy(
+                                                fontWeight = if (!showTopByProtein) FontWeight.Bold else FontWeight.Medium
+                                            ),
+                                            color = if (!showTopByProtein) colors.onAccent else colors.textPrimary
+                                        )
+                                    }
+                                }
+                                Surface(
+                                    modifier = Modifier.weight(1f).height(36.dp),
+                                    shape = ZCalShapes.Pill,
+                                    color = if (showTopByProtein) colors.accent else colors.surfaceVariant,
+                                    border = BorderStroke(1.dp, if (showTopByProtein) colors.accent else colors.outline),
+                                    onClick = { showTopByProtein = true }
+                                ) {
+                                    androidx.compose.foundation.layout.Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Text(
+                                            strings.byProteinLabel,
+                                            style = ZCalTypeScale.Label.copy(
+                                                fontWeight = if (showTopByProtein) FontWeight.Bold else FontWeight.Medium
+                                            ),
+                                            color = if (showTopByProtein) colors.onAccent else colors.textPrimary
+                                        )
+                                    }
+                                }
                             }
                         }
 

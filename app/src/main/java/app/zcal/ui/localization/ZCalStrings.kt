@@ -163,7 +163,16 @@ data class Translations(
     val noMealsOnDay: String = "No meals logged on this day.",
     val markDayCompleteTitle: String = "Mark Day Complete",
     val markDayCompleteDesc: String = "Only complete days count toward goal-day averages.",
-    val aiOptimizePlanBtn: String = "AI-Optimize My Plan"
+    val aiOptimizePlanBtn: String = "AI-Optimize My Plan",
+    val birthday: String = "Birthday",
+    val day: String = "Day",
+    val month: String = "Month",
+    val year: String = "Year",
+    val bodyMetricsTitle: String = "Body Measurements & Target Goals",
+    val updateTargetsBtn: String = "Update & Recalculate Goals",
+    val targetWeightLabel: String = "Target Weight",
+    val heightLabel: String = "Height",
+    val weightLabel: String = "Weight"
 )
 
 object ZCalStrings {

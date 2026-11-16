@@ -146,14 +146,15 @@ fun ZCalSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isLoading: Boolean = false
 ) {
     val colors = LocalZCalColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.975f else 1f,
+        targetValue = if (isPressed && enabled && !isLoading) 0.975f else 1f,
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
         label = "secBtnScale"
     )
@@ -165,7 +166,7 @@ fun ZCalSecondaryButton(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                enabled = enabled,
+                enabled = enabled && !isLoading,
                 onClick = onClick
             ),
         shape = ZCalShapes.Pill,
@@ -179,25 +180,33 @@ fun ZCalSecondaryButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(18.dp)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = colors.accent,
+                    strokeWidth = 2.dp
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+            } else {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = colors.textPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                Text(
+                    text = text,
+                    style = ZCalTypeScale.Title.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = colors.textPrimary
+                )
             }
-            Text(
-                text = text,
-                style = ZCalTypeScale.Title.copy(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = colors.textPrimary
-            )
         }
     }
 }

@@ -99,6 +99,8 @@ data class PeriodTargetBreakdown(
 data class UserProfile(
     val sex: BiologicalSex = BiologicalSex.MALE,
     val birthYear: Int = 1998,
+    val birthMonth: Int = 1,
+    val birthDay: Int = 1,
     val heightCm: Double = 178.0,
     val weightKg: Double = 75.0,
     val targetWeightKg: Double = 70.0,
@@ -117,7 +119,21 @@ data class UserProfile(
     val units: UnitSystem = UnitSystem.METRIC,
     val personalCalibrationPct: Int = 0,
     val onboardingCompleted: Boolean = false
-)
+) {
+    fun computeCurrentAge(now: java.time.LocalDate = java.time.LocalDate.now()): Int {
+        val safeMonth = birthMonth.coerceIn(1, 12)
+        val maxDays = try {
+            java.time.YearMonth.of(birthYear, safeMonth).lengthOfMonth()
+        } catch (_: Exception) { 31 }
+        val safeDay = birthDay.coerceIn(1, maxDays)
+        val birthDate = try {
+            java.time.LocalDate.of(birthYear, safeMonth, safeDay)
+        } catch (_: Exception) {
+            java.time.LocalDate.of(birthYear, 1, 1)
+        }
+        return java.time.Period.between(birthDate, now).years.coerceAtLeast(1)
+    }
+}
 
 data class Goals(
     val bmrKcal: Int,

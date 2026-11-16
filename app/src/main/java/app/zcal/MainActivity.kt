@@ -4,13 +4,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,6 +48,7 @@ import app.zcal.ui.review.ReviewMealScreen
 import app.zcal.ui.review.ReviewViewModel
 import app.zcal.ui.settings.SettingsScreen
 import app.zcal.ui.settings.SettingsViewModel
+import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -59,6 +65,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var profileRepository: ProfileRepository
+
+    @Inject
+    lateinit var computeGoalsUseCase: app.zcal.domain.usecase.ComputeGoalsUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -89,6 +98,36 @@ class MainActivity : ComponentActivity() {
                     dynamicColorEnabled = dynamicColor
                 ) {
                     val currentProfile = profile ?: return@ZCalTheme
+                    val colors = LocalZCalColors.current
+
+                    // Long-term health: automatically recalibrate goals if user aged up or changed measurements
+                    LaunchedEffect(
+                        currentProfile.birthYear,
+                        currentProfile.birthMonth,
+                        currentProfile.birthDay,
+                        currentProfile.weightKg,
+                        currentProfile.heightCm,
+                        currentProfile.activityLevel,
+                        currentProfile.goalType
+                    ) {
+                        if (currentProfile.onboardingCompleted) {
+                            val computed = computeGoalsUseCase.fromProfile(currentProfile)
+                            if (computed.dailyCalories != currentProfile.calorieGoal) {
+                                profileRepository.saveUserProfile(
+                                    currentProfile.copy(
+                                        calorieGoal = computed.dailyCalories,
+                                        kilojouleGoal = computed.dailyKilojoules,
+                                        proteinGoalG = computed.proteinG,
+                                        carbsGoalG = computed.carbsG,
+                                        fatGoalG = computed.fatG,
+                                        claGoalMg = computed.claMg,
+                                        fiberGoalG = computed.fiberG
+                                    )
+                                )
+                            }
+                        }
+                    }
+
                     val navController = rememberNavController()
                     val backStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = backStackEntry?.destination?.route
@@ -106,16 +145,38 @@ class MainActivity : ComponentActivity() {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .displayCutoutPadding()
+                            .background(colors.canvas)
                     ) {
                         NavHost(
                             navController = navController,
                             startDestination = startDest,
-                            modifier = Modifier.fillMaxSize(),
-                            enterTransition = { fadeIn(animationSpec = tween(220)) },
-                            exitTransition = { fadeOut(animationSpec = tween(220)) },
-                            popEnterTransition = { fadeIn(animationSpec = tween(220)) },
-                            popExitTransition = { fadeOut(animationSpec = tween(220)) }
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(colors.canvas),
+                            enterTransition = {
+                                slideInHorizontally(
+                                    initialOffsetX = { 70 },
+                                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f)
+                                ) + fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing))
+                            },
+                            exitTransition = {
+                                slideOutHorizontally(
+                                    targetOffsetX = { -50 },
+                                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f)
+                                ) + fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+                            },
+                            popEnterTransition = {
+                                slideInHorizontally(
+                                    initialOffsetX = { -50 },
+                                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f)
+                                ) + fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing))
+                            },
+                            popExitTransition = {
+                                slideOutHorizontally(
+                                    targetOffsetX = { 70 },
+                                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f)
+                                ) + fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+                            }
                         ) {
                             composable("onboarding") {
                                 val onboardingVm: OnboardingViewModel = hiltViewModel()
