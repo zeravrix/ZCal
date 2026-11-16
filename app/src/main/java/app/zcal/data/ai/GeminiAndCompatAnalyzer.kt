@@ -114,11 +114,15 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                     }
                 }
                 is RawHttpOutcome.Failure -> {
-                    if (rawCallResult.modelGone && isAuto && !reResolved) {
-                        // The model auto picked earlier was retired: forget it and pick again from the live list.
+                    if (rawCallResult.modelGone && !reResolved) {
+                        // The model was retired or unavailable: clear cached resolved model and switch to fallbackModel
                         reResolved = true
                         keyVault.clearResolvedModel(provider)
-                        modelId = resolveModel(provider, apiKey, baseUrl, configuredModel)
+                        modelId = if (isAuto) {
+                            resolveModel(provider, apiKey, baseUrl, configuredModel)
+                        } else {
+                            provider.fallbackModel
+                        }
                         continue
                     }
                     return rawCallResult.error
@@ -140,9 +144,9 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         }
         val provider = keyVault.activeProviderFlow.first()
         val defaultModelToTest = if (!modelId.trim().equals(ModelSelector.AUTO, ignoreCase = true) && modelId.isNotBlank()) {
-            modelId.trim()
+            modelId.trim().removePrefix("models/")
         } else {
-            provider.defaultModel
+            provider.fallbackModel
         }
 
         // Fast-path: probe the primary model directly in one quick HTTP call (< 600ms)
@@ -152,7 +156,10 @@ class MultiProviderFoodAnalyzer @Inject constructor(
             return fastResult
         }
         val err = (fastResult as KeyVerificationResult.Invalid).errorMessage
-        if (err.startsWith("HTTP 401") || err.startsWith("HTTP 403") || err.contains("API key", ignoreCase = true)) {
+        val isExplicitKeyError = err.contains("API_KEY_INVALID", ignoreCase = true) ||
+            err.contains("API key not valid", ignoreCase = true) ||
+            err.contains("invalid api key", ignoreCase = true)
+        if (isExplicitKeyError) {
             return fastResult
         }
 
@@ -160,18 +167,17 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         val ids = fetchModelIds(provider, trimmedKey, baseUrl)
         val allowPreview = keyVault.allowPreviewModelsFlow.first()
         val ranked = ids?.let { ModelSelector.rank(provider, it, allowPreview) }.orEmpty()
-        val candidates = (ranked.take(2) + provider.fallbackModel).distinct()
+        val candidates = (listOf(defaultModelToTest, provider.fallbackModel) + ranked).distinct()
         var last: KeyVerificationResult = fastResult
         for (candidate in candidates) {
             if (candidate == defaultModelToTest) continue
             when (val res = probeModel(provider, trimmedKey, baseUrl, candidate)) {
                 is KeyVerificationResult.Valid -> {
-                    if (candidate in ranked) keyVault.saveResolvedModel(provider, candidate)
+                    keyVault.saveResolvedModel(provider, candidate)
                     return res
                 }
                 is KeyVerificationResult.Invalid -> {
-                    val m = res.errorMessage
-                    if (m.startsWith("HTTP 401") || m.startsWith("HTTP 403") || m.contains("API key", ignoreCase = true)) return res
+                    if (res.errorMessage.contains("API_KEY_INVALID", ignoreCase = true)) return res
                     last = res
                 }
             }
@@ -257,7 +263,8 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         return try {
             val response = if (provider == AiProviderType.GEMINI) {
                 val cleanBase = baseUrl.trimEnd('/').ifEmpty { AiProviderType.GEMINI.defaultBaseUrl }
-                val url = "$cleanBase/v1beta/models/${modelId.trim()}:generateContent"
+                val cleanModel = modelId.removePrefix("models/").trim().ifEmpty { AiProviderType.GEMINI.fallbackModel }
+                val url = "$cleanBase/v1beta/models/$cleanModel:generateContent"
                 val payload = buildJsonObject {
                     putJsonArray("contents") {
                         addJsonObject {
@@ -267,7 +274,8 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                         }
                     }
                     putJsonObject("generationConfig") {
-                        put("maxOutputTokens", 8)
+                        put("maxOutputTokens", 128)
+                        put("temperature", 0.1)
                     }
                 }
                 httpClient.post(url) {
@@ -275,39 +283,41 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                     contentType(ContentType.Application.Json)
                     setBody(payload.toString())
                     timeout {
-                        requestTimeoutMillis = 8_000L
-                        connectTimeoutMillis = 4_000L
-                        socketTimeoutMillis = 8_000L
+                        requestTimeoutMillis = 10_000L
+                        connectTimeoutMillis = 5_000L
+                        socketTimeoutMillis = 10_000L
                     }
                 }
             } else {
                 val cleanBase = baseUrl.trimEnd('/').ifEmpty { AiProviderType.OPENAI_COMPATIBLE.defaultBaseUrl }
+                val cleanModel = modelId.trim().ifEmpty { AiProviderType.OPENAI_COMPATIBLE.fallbackModel }
                 val url = "$cleanBase/chat/completions"
                 val payload = buildJsonObject {
-                    put("model", modelId.trim())
+                    put("model", cleanModel)
                     putJsonArray("messages") {
                         addJsonObject {
                             put("role", "user")
                             put("content", "Reply with OK")
                         }
                     }
-                    put("max_tokens", 8)
+                    put("max_tokens", 64)
                 }
                 httpClient.post(url) {
                     header("Authorization", "Bearer $trimmedKey")
                     contentType(ContentType.Application.Json)
                     setBody(payload.toString())
                     timeout {
-                        requestTimeoutMillis = 8_000L
-                        connectTimeoutMillis = 4_000L
-                        socketTimeoutMillis = 8_000L
+                        requestTimeoutMillis = 10_000L
+                        connectTimeoutMillis = 5_000L
+                        socketTimeoutMillis = 10_000L
                     }
                 }
             }
 
             val elapsed = System.currentTimeMillis() - startMs
             if (response.status.value in 200..299) {
-                KeyVerificationResult.Valid(latencyMs = elapsed, modelUsed = modelId)
+                val cleanModel = if (provider == AiProviderType.GEMINI) modelId.removePrefix("models/").trim() else modelId.trim()
+                KeyVerificationResult.Valid(latencyMs = elapsed, modelUsed = cleanModel.ifEmpty { provider.fallbackModel })
             } else {
                 val body = response.bodyAsText().take(240)
                 KeyVerificationResult.Invalid("HTTP ${response.status.value}: $body")
@@ -359,18 +369,23 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                             )
                         }
                     }
-                    status == 401 || status == 403 || (status == 400 && looksLikeKeyProblem(bodyText)) -> {
+                    status == 401 || (status == 400 && looksLikeKeyProblem(bodyText)) || (status == 403 && looksLikeKeyProblem(bodyText)) -> {
                         val who = if (provider == AiProviderType.GEMINI) "Google" else "The provider"
                         return RawHttpOutcome.Failure(
                             FoodAnalysisResult.InvalidKey("$who did not accept this key (HTTP $status). Check it and try again.")
                         )
                     }
-                    status == 400 || status == 404 || status == 413 || status == 422 -> {
+                    status == 400 || status == 403 || status == 404 || status == 413 || status == 422 -> {
+                        val isModelUnavailable = status == 404 || status == 403 ||
+                            bodyText.contains("not found", ignoreCase = true) ||
+                            bodyText.contains("permission to access model", ignoreCase = true) ||
+                            bodyText.contains("not available", ignoreCase = true) ||
+                            bodyText.contains("deprecated", ignoreCase = true)
                         return RawHttpOutcome.Failure(
                             FoodAnalysisResult.UnknownError(
                                 "Request rejected (HTTP $status). Check the model name and base URL in Settings. ${extractErrorMessage(bodyText)}".trim()
                             ),
-                            modelGone = status == 404
+                            modelGone = isModelUnavailable
                         )
                     }
                     status == 429 || status == 503 -> {
@@ -445,7 +460,8 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         userPrompt: String
     ): io.ktor.client.statement.HttpResponse {
         val images = encodeImages(imageFiles)
-        return httpClient.post("${baseUrl.trimEnd('/')}/v1beta/models/$modelId:generateContent") {
+        val cleanModel = modelId.removePrefix("models/").trim().ifEmpty { AiProviderType.GEMINI.fallbackModel }
+        return httpClient.post("${baseUrl.trimEnd('/')}/v1beta/models/$cleanModel:generateContent") {
         // Section 7 rule: Send the key in the x-goog-api-key header, NEVER in the URL
         header("x-goog-api-key", apiKey)
         contentType(ContentType.Application.Json)

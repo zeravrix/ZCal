@@ -3,6 +3,7 @@ package app.zcal.ui.onboarding
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -671,6 +672,38 @@ fun OnboardingScreen(
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
+
+                            val quickModels = if (selectedProvider == AiProviderType.GEMINI) {
+                                listOf("auto", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.8-pro")
+                            } else {
+                                listOf("auto", "gpt-4o-mini", "gpt-4.1-mini")
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                quickModels.forEach { qm ->
+                                    val isChosen = modelInput.equals(qm, ignoreCase = true)
+                                    Surface(
+                                        shape = ZCalShapes.Pill,
+                                        color = if (isChosen) colors.accent.copy(alpha = 0.16f) else colors.surface,
+                                        border = BorderStroke(1.dp, if (isChosen) colors.accent else colors.outline),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { modelInput = qm }
+                                    ) {
+                                        Text(
+                                            text = if (qm == "auto") "auto" else qm.substringAfter("gemini-").substringAfter("gpt-"),
+                                            style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.SemiBold),
+                                            color = if (isChosen) colors.accent else colors.textSecondary,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
 
                             if (selectedProvider == AiProviderType.OPENAI_COMPATIBLE) {
                                 Spacer(modifier = Modifier.height(10.dp))

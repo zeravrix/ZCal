@@ -122,10 +122,15 @@ class ZCalUnitTests {
     @Test
     fun `ModelSelector prefers Flash over Pro and Lite and the newest stable generation`() {
         val ids = listOf(
-            "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash",
+            "gemini-3.8-flash", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash",
             "gemini-2.5-flash-image", "gemini-2.5-flash-preview-tts", "text-embedding-004", "gemma-3-27b-it"
         )
-        assertEquals("gemini-2.5-flash", ModelSelector.pickBest(AiProviderType.GEMINI, ids, allowPreview = false))
+        assertEquals("gemini-3.8-flash", ModelSelector.pickBest(AiProviderType.GEMINI, ids, allowPreview = false))
+    }
+
+    @Test
+    fun `AiProviderType Gemini defaults to gemini-3_8-flash fallback`() {
+        assertEquals("gemini-3.8-flash", AiProviderType.GEMINI.fallbackModel)
     }
 
     @Test

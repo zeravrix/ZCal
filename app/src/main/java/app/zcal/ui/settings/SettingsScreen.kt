@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
@@ -233,9 +234,15 @@ class SettingsViewModel @Inject constructor(
                     onDone(true)
                 }
                 is KeyVerificationResult.Invalid -> {
-                    keyVault.updateProviderConfig(prevProvider, prevModel, prevBase)
-                    _verifyMessage.value = "Not saved, previous settings kept. ${res.errorMessage}"
-                    onDone(false)
+                    val existingKey = keyVault.getApiKey(provider)
+                    if (newKey.isBlank() && !existingKey.isNullOrBlank()) {
+                        _verifyMessage.value = "Model saved ($modelToTest). Note: ${res.errorMessage}"
+                        onDone(true)
+                    } else {
+                        keyVault.updateProviderConfig(prevProvider, prevModel, prevBase)
+                        _verifyMessage.value = "Not saved, previous settings kept. ${res.errorMessage}"
+                        onDone(false)
+                    }
                 }
             }
         }
@@ -455,6 +462,37 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         shape = ZCalShapes.Input,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    val quickModels = if (provider == AiProviderType.GEMINI) {
+                        listOf("auto", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.8-pro")
+                    } else {
+                        listOf("auto", "gpt-4o-mini", "gpt-4.1-mini")
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        quickModels.forEach { qm ->
+                            val isChosen = modelEdit.equals(qm, ignoreCase = true)
+                            Surface(
+                                shape = ZCalShapes.Pill,
+                                color = if (isChosen) colors.accent.copy(alpha = 0.16f) else colors.surface,
+                                border = BorderStroke(1.dp, if (isChosen) colors.accent else colors.outline),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { modelEdit = qm }
+                            ) {
+                                Text(
+                                    text = if (qm == "auto") "auto" else qm.substringAfter("gemini-").substringAfter("gpt-"),
+                                    style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.SemiBold),
+                                    color = if (isChosen) colors.accent else colors.textSecondary,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp)
+                                )
+                            }
+                        }
+                    }
 
                     SettingsToggleRow(
                         title = strings.allowPreviewModels,
