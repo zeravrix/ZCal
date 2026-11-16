@@ -29,8 +29,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.material.icons.outlined.Replay
+import app.zcal.ui.localization.LocalZCalStrings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -488,6 +491,7 @@ fun ReviewMealScreen(
     }
 
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     val haptic = LocalHapticFeedback.current
     val meal by viewModel.draftMeal.collectAsState()
     var fixText by remember { mutableStateOf("") }
@@ -562,7 +566,7 @@ fun ReviewMealScreen(
                         OutlinedTextField(
                             value = meal.name,
                             onValueChange = { viewModel.updateMealName(it) },
-                            label = { Text("Meal Title") },
+                            label = { Text(strings.mealTitleLabel) },
                             shape = ZCalShapes.Input,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -617,28 +621,28 @@ fun ReviewMealScreen(
 
                         // Animated Nutrient Bars for Protein, Fat, Carbs, and CLA (mg)
                         AnimatedNutrientBar(
-                            label = "Protein (P)",
+                            label = "${strings.protein} (P)",
                             valueText = "${meal.proteinG} g",
                             fraction = (meal.proteinG / 60.0).toFloat().coerceIn(0f, 1f),
                             barColor = colors.protein
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         AnimatedNutrientBar(
-                            label = "Fat (F)",
+                            label = "${strings.fat} (F)",
                             valueText = "${meal.fatG} g",
                             fraction = (meal.fatG / 40.0).toFloat().coerceIn(0f, 1f),
                             barColor = colors.fat
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         AnimatedNutrientBar(
-                            label = "Carbohydrates (C)",
+                            label = "${strings.carbs} (C)",
                             valueText = "${meal.carbsG} g",
                             fraction = (meal.carbsG / 100.0).toFloat().coerceIn(0f, 1f),
                             barColor = colors.carbs
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         AnimatedNutrientBar(
-                            label = "CLA (Conjugated Linoleic Acid) & Fiber",
+                            label = "${strings.cla} & ${strings.fiber}",
                             valueText = "${meal.claMg.roundToInt()} mg CLA • ${meal.fiberG} g Fiber",
                             fraction = (meal.claMg / 500.0).toFloat().coerceIn(0.1f, 1f),
                             barColor = colors.accent
@@ -655,7 +659,7 @@ fun ReviewMealScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Scale portion:", style = ZCalTypeScale.Label, color = colors.textSecondary)
+                Text(strings.scalePortionLabel, style = ZCalTypeScale.Label, color = colors.textSecondary)
                 listOf(0.5 to "0.5x", 1.0 to "1x", 1.5 to "1.5x", 2.0 to "2x").forEach { (mult, label) ->
                     OutlinedButton(
                         onClick = { viewModel.applyServingMultiplier(mult) },
@@ -685,7 +689,7 @@ fun ReviewMealScreen(
                         OutlinedTextField(
                             value = item.name,
                             onValueChange = { viewModel.updateItemName(idx, it) },
-                            label = { Text("Item #${idx + 1}") },
+                            label = { Text(strings.itemNumberLabel.format(idx + 1)) },
                             shape = ZCalShapes.Input,
                             modifier = Modifier.weight(1f)
                         )
@@ -752,7 +756,7 @@ fun ReviewMealScreen(
             ) {
                 Icon(Icons.Outlined.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Add Missing Item / Oil / Sauce")
+                Text(strings.addMissingItemBtn)
             }
         }
 
@@ -765,7 +769,7 @@ fun ReviewMealScreen(
                 border = BorderStroke(1.dp, colors.outline)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Fix with AI", style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    Text(strings.fixWithAiTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -774,7 +778,7 @@ fun ReviewMealScreen(
                         OutlinedTextField(
                             value = fixText,
                             onValueChange = { fixText = it },
-                            placeholder = { Text("e.g. Grilled without oil, 200g chicken") },
+                            placeholder = { Text(strings.fixWithAiHint) },
                             shape = ZCalShapes.Input,
                             modifier = Modifier.weight(1f)
                         )
@@ -800,17 +804,19 @@ fun ReviewMealScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ZCalSecondaryButton(
-                    text = "Retake",
+                    text = strings.retake,
+                    icon = Icons.Outlined.Replay,
                     onClick = onBack,
                     modifier = Modifier.weight(1f)
                 )
                 ZCalPrimaryButton(
-                    text = "Save Meal & Sync",
+                    text = strings.saveMealAndSyncBtn,
+                    icon = Icons.Outlined.Check,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         viewModel.saveReviewedMeal(onSaved)
                     },
-                    modifier = Modifier.weight(2f)
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

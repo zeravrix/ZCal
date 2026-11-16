@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import app.zcal.ui.localization.LocalZCalStrings
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -192,6 +193,7 @@ class ProgressViewModel @Inject constructor(
 @Composable
 fun ProgressScreen(viewModel: ProgressViewModel) {
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     val context = LocalContext.current
 
     val yearMonth by viewModel.selectedYearMonth.collectAsState()
@@ -373,11 +375,11 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                     border = BorderStroke(1.dp, colors.outline)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Weekday Pattern & Meal Split", style = ZCalTypeScale.Title, color = colors.textPrimary)
+                        Text(strings.weekdayPatternTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
                         Spacer(modifier = Modifier.height(8.dp))
                         val dayNames = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
                         if (weekdayRows.isEmpty()) {
-                            Text("Log meals across the week to spot weekend calorie drift.", style = ZCalTypeScale.BodySmall, color = colors.textSecondary)
+                            Text(strings.weekdayPatternDesc, style = ZCalTypeScale.BodySmall, color = colors.textSecondary)
                         } else {
                             weekdayRows.forEach { row ->
                                 val dayName = dayNames.getOrElse(row.weekday) { "Day" }
@@ -421,24 +423,24 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Top 5 Foods", style = ZCalTypeScale.Title, color = colors.textPrimary)
+                            Text(strings.topFoodsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 FilterChip(
                                     selected = !showTopByProtein,
                                     onClick = { showTopByProtein = false },
-                                    label = { Text("By Calories") }
+                                    label = { Text(strings.byCaloriesLabel) }
                                 )
                                 FilterChip(
                                     selected = showTopByProtein,
                                     onClick = { showTopByProtein = true },
-                                    label = { Text("By Protein") }
+                                    label = { Text(strings.byProteinLabel) }
                                 )
                             }
                         }
 
                         val activeList = if (showTopByProtein) topProtFoods else topCalFoods
                         if (activeList.isEmpty()) {
-                            Text("Your most frequent foods will appear here.", style = ZCalTypeScale.BodySmall, color = colors.textSecondary)
+                            Text(strings.frequentFoodsEmpty, style = ZCalTypeScale.BodySmall, color = colors.textSecondary)
                         } else {
                             activeList.forEachIndexed { i, foodRow ->
                                 Row(
@@ -471,12 +473,12 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                     border = BorderStroke(1.dp, colors.outline)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Monthly Highlights", style = ZCalTypeScale.Title, color = colors.textPrimary)
-                        Text("• Protein target hit on $proteinHitDays of ${completeDays.size} complete days.", style = ZCalTypeScale.BodySmall, color = colors.textPrimary)
-                        Text("• Longest logging streak this month: $bestStreak consecutive days.", style = ZCalTypeScale.BodySmall, color = colors.textPrimary)
+                        Text(strings.monthlyHighlightsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+                        Text(strings.proteinHitFormat.format(proteinHitDays, completeDays.size), style = ZCalTypeScale.BodySmall, color = colors.textPrimary)
+                        Text(strings.longestStreakFormat.format(bestStreak), style = ZCalTypeScale.BodySmall, color = colors.textPrimary)
                         val bestDay = completeDays.minByOrNull { abs(it.kcal - profile.calorieGoal) }
                         if (bestDay != null) {
-                            Text("• Closest day to goal: ${bestDay.localDate} (${bestDay.kcal} kcal).", style = ZCalTypeScale.BodySmall, color = colors.textPrimary)
+                            Text(strings.closestDayFormat.format(bestDay.localDate, bestDay.kcal), style = ZCalTypeScale.BodySmall, color = colors.textPrimary)
                         }
                     }
                 }
@@ -498,7 +500,7 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                 OutlinedTextField(
                     value = weightInputText,
                     onValueChange = { weightInputText = it },
-                    label = { Text("Today's Weight (kg)") },
+                    label = { Text(strings.todaysWeightLabel) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = ZCalShapes.Input,
                     modifier = Modifier.weight(1f)
@@ -514,7 +516,7 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                     modifier = Modifier.height(52.dp)
                 ) {
-                    Text("Log Weight", color = colors.onAccent)
+                    Text(strings.logWeightBtn, color = colors.onAccent)
                 }
             }
         }
@@ -527,7 +529,7 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Icon(Icons.Outlined.IosShare, contentDescription = null)
-                Text("Export & Share Nutrition Log (CSV)", modifier = Modifier.padding(start = 8.dp))
+                Text(strings.exportCsvBtn, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -548,7 +550,7 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
             ) {
                 Text(DateHelpers.formatFriendlyDate(dateStr), style = ZCalTypeScale.Title, color = colors.textPrimary)
                 if (daySum == null || daySum.mealCount == 0) {
-                    Text("No meals logged on this day.", style = ZCalTypeScale.Body, color = colors.textSecondary)
+                    Text(strings.noMealsOnDay, style = ZCalTypeScale.Body, color = colors.textSecondary)
                 } else {
                     Text(
                         "${daySum.kcal} kcal across ${daySum.mealCount} meal(s) • P ${daySum.proteinG.roundToInt()}g • C ${daySum.carbsG.roundToInt()}g • F ${daySum.fatG.roundToInt()}g",
@@ -561,8 +563,8 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Mark Day Complete", style = ZCalTypeScale.Body, color = colors.textPrimary)
-                            Text("Only complete days count toward goal-day averages.", style = ZCalTypeScale.Label, color = colors.textSecondary)
+                            Text(strings.markDayCompleteTitle, style = ZCalTypeScale.Body, color = colors.textPrimary)
+                            Text(strings.markDayCompleteDesc, style = ZCalTypeScale.Label, color = colors.textSecondary)
                         }
                         Switch(
                             checked = daySum.complete,

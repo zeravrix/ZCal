@@ -358,7 +358,7 @@ fun HomeScreen(
                         border = BorderStroke(1.dp, colors.accent)
                     ) {
                         Text(
-                            text = "$pendingScansCount offline meal photo(s) queued for automatic AI analysis.",
+                            text = strings.offlineQueuedFormat.format(pendingScansCount),
                             style = ZCalTypeScale.BodySmall,
                             color = colors.textPrimary,
                             modifier = Modifier.padding(14.dp)
@@ -389,12 +389,12 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Energy: %,d / %,d kJ".format(eatenKj, profile.kilojouleGoal),
+                            text = strings.energyFormat.format("%,d".format(eatenKj), "%,d".format(profile.kilojouleGoal)),
                             style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.SemiBold),
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "CLA: %,d / %,d mg".format(eatenCla, profile.claGoalMg),
+                            text = strings.claFormat.format("%,d".format(eatenCla), "%,d".format(profile.claGoalMg)),
                             style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.SemiBold),
                             color = colors.accent
                         )
@@ -437,7 +437,7 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Icon(Icons.AutoMirrored.Outlined.DirectionsWalk, contentDescription = null, tint = colors.accent)
-                                Text("Health App Steps (${healthSteps.sourceLabel})", style = ZCalTypeScale.Label, color = colors.textSecondary)
+                                Text("${strings.healthStepsLabel} (${healthSteps.sourceLabel})", style = ZCalTypeScale.Label, color = colors.textSecondary)
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -446,7 +446,7 @@ fun HomeScreen(
                                 color = colors.textPrimary
                             )
                             Text(
-                                text = "Active burn: ${healthSteps.activeBurnKcal} kcal (${healthSteps.activeBurnKj} kJ)",
+                                text = strings.activeBurnFormat.format(healthSteps.activeBurnKcal, healthSteps.activeBurnKj),
                                 style = ZCalTypeScale.Label,
                                 color = colors.accent
                             )
@@ -459,7 +459,7 @@ fun HomeScreen(
                                 },
                                 shape = ZCalShapes.Pill
                             ) {
-                                Text("Sync Health")
+                                Text(strings.syncHealthBtn)
                             }
                         }
                     }
@@ -531,7 +531,7 @@ fun HomeScreen(
                                 color = colors.textPrimary
                             )
                             Text(
-                                text = "+250 ml glass",
+                                text = strings.waterTrackerHint,
                                 style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.SemiBold),
                                 color = colors.accent,
                                 modifier = Modifier
@@ -644,7 +644,7 @@ private fun ManualMealEntryBottomSheet(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Log Known Meal Manually", style = ZCalTypeScale.Title, color = colors.textPrimary)
+            Text(strings.manualEntry, style = ZCalTypeScale.Title, color = colors.textPrimary)
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MealType.entries.forEach { mt ->
@@ -667,7 +667,7 @@ private fun ManualMealEntryBottomSheet(
             OutlinedTextField(
                 value = calories,
                 onValueChange = { calories = it },
-                label = { Text("Calories (kcal)") },
+                label = { Text("${strings.calories} (kcal)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 shape = ZCalShapes.Input,
                 modifier = Modifier.fillMaxWidth()
@@ -677,7 +677,7 @@ private fun ManualMealEntryBottomSheet(
                 OutlinedTextField(
                     value = protein,
                     onValueChange = { protein = it },
-                    label = { Text("Protein (g)") },
+                    label = { Text("${strings.protein} (g)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = ZCalShapes.Input,
                     modifier = Modifier.weight(1f)
@@ -685,7 +685,7 @@ private fun ManualMealEntryBottomSheet(
                 OutlinedTextField(
                     value = carbs,
                     onValueChange = { carbs = it },
-                    label = { Text("Carbs (g)") },
+                    label = { Text("${strings.carbs} (g)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = ZCalShapes.Input,
                     modifier = Modifier.weight(1f)
@@ -693,7 +693,7 @@ private fun ManualMealEntryBottomSheet(
                 OutlinedTextField(
                     value = fat,
                     onValueChange = { fat = it },
-                    label = { Text("Fat (g)") },
+                    label = { Text("${strings.fat} (g)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = ZCalShapes.Input,
                     modifier = Modifier.weight(1f)

@@ -41,6 +41,7 @@ import androidx.lifecycle.viewModelScope
 import coil.compose.AsyncImage
 import app.zcal.data.cache.FoodHistoryCacheManager
 import app.zcal.domain.model.CachedFoodHistoryItem
+import app.zcal.ui.localization.LocalZCalStrings
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
@@ -81,6 +82,7 @@ class HistoryCacheViewModel @Inject constructor(
 @Composable
 fun HistoryCacheScreen(viewModel: HistoryCacheViewModel) {
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     val items by viewModel.cachedItems.collectAsState()
     var cacheSizeKb by remember(items) { mutableLongStateOf(viewModel.getCacheSizeKb()) }
     val daysRemaining = remember { viewModel.daysUntilNextPurge() }
@@ -93,10 +95,10 @@ fun HistoryCacheScreen(viewModel: HistoryCacheViewModel) {
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Text("Monthly Food Image Cache", style = ZCalTypeScale.Headline, color = colors.textPrimary)
+            Text(strings.imageCacheTitle, style = ZCalTypeScale.Headline, color = colors.textPrimary)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Cached food photos and detailed breakdowns automatically empty at the start of every new month.",
+                strings.autoEmptiesIn.format(daysRemaining),
                 style = ZCalTypeScale.BodySmall,
                 color = colors.textSecondary
             )
@@ -121,13 +123,13 @@ fun HistoryCacheScreen(viewModel: HistoryCacheViewModel) {
                             Icon(Icons.Outlined.AutoDelete, contentDescription = null, tint = colors.accent)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                "Auto-Empties in $daysRemaining day(s)",
+                                strings.autoEmptiesIn.format(daysRemaining),
                                 style = ZCalTypeScale.Title,
                                 color = colors.textPrimary
                             )
                         }
                         Text(
-                            "${items.size} cached meal(s) • $cacheSizeKb KB on disk",
+                            strings.cachedMealsCount.format(items.size, cacheSizeKb),
                             style = ZCalTypeScale.Label,
                             color = colors.textSecondary
                         )
@@ -143,7 +145,7 @@ fun HistoryCacheScreen(viewModel: HistoryCacheViewModel) {
                     ) {
                         Icon(Icons.Outlined.DeleteSweep, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Empty Now")
+                        Text(strings.emptyNowBtn)
                     }
                 }
             }
@@ -158,7 +160,7 @@ fun HistoryCacheScreen(viewModel: HistoryCacheViewModel) {
                     border = BorderStroke(1.dp, colors.outline)
                 ) {
                     Text(
-                        text = "History cache is empty. Snapped food photos and details for this month will appear here.",
+                        text = strings.emptyCacheMsg,
                         style = ZCalTypeScale.Body,
                         color = colors.textSecondary,
                         modifier = Modifier.padding(24.dp)
@@ -213,7 +215,7 @@ fun HistoryCacheScreen(viewModel: HistoryCacheViewModel) {
                                 color = colors.accent
                             )
                             Text(
-                                text = "Protein ${cached.proteinG}g • Fat ${cached.fatG}g • Carbs ${cached.carbsG}g • CLA ${cached.claMg.roundToInt()}mg",
+                                text = "${strings.protein} ${cached.proteinG}g • ${strings.fat} ${cached.fatG}g • ${strings.carbs} ${cached.carbsG}g • ${strings.cla} ${cached.claMg.roundToInt()}mg",
                                 style = ZCalTypeScale.Label,
                                 color = colors.textPrimary
                             )

@@ -359,9 +359,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 border = BorderStroke(1.dp, colors.outline)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("BYOK AI Provider & Key Vault", style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    Text(strings.byokTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
                     Text(
-                        text = "Stored Key: ${maskedKey ?: "None configured (Encrypted with Android Keystore AES-GCM)"}",
+                        text = "${strings.storedKey}: ${maskedKey ?: strings.noKeyConfigured}",
                         style = ZCalTypeScale.BodySmall,
                         color = colors.textSecondary
                     )
@@ -383,21 +383,17 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     OutlinedTextField(
                         value = modelEdit,
                         onValueChange = { modelEdit = it },
-                        label = { Text("Model (auto = best for food photos)") },
+                        label = { Text(strings.modelLabel) },
                         supportingText = {
-                            Text(
-                                "Leave as auto: ZCal checks which models your key can use and picks the best one for " +
-                                    "reading food photos (balanced vision, JSON and speed, not the biggest or the cheapest). " +
-                                    "Type a model ID only to override."
-                            )
+                            Text(strings.modelSupportingText)
                         },
                         shape = ZCalShapes.Input,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     SettingsToggleRow(
-                        title = "Allow preview models",
-                        subtitle = "Auto may pick a newer preview model. Previews can change or disappear, so this is off by default.",
+                        title = strings.allowPreviewModels,
+                        subtitle = strings.allowPreviewDesc,
                         checked = allowPreview,
                         onCheckedChange = { viewModel.setAllowPreviewModels(it) }
                     )
@@ -407,17 +403,17 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         enabled = !loadingModels,
                         shape = ZCalShapes.Pill
                     ) {
-                        Text(if (loadingModels) "Loading models..." else "Choose from my key's models")
+                        Text(if (loadingModels) strings.loadingModels else strings.chooseModelsBtn)
                     }
 
                     OutlinedTextField(
                         value = baseUrlEdit,
                         onValueChange = { baseUrlEdit = it },
-                        label = { Text("Base URL") },
+                        label = { Text(strings.baseUrlLabel) },
                         supportingText = {
                             Text(
-                                if (provider == AiProviderType.GEMINI) "Leave the default unless you use your own proxy."
-                                else "OpenAI, OpenRouter (https://openrouter.ai/api/v1) or a local Ollama (http://10.0.2.2:11434/v1 in the emulator)."
+                                if (provider == AiProviderType.GEMINI) strings.baseUrlGeminiHint
+                                else strings.baseUrlOpenAiHint
                             )
                         },
                         shape = ZCalShapes.Input,
@@ -427,7 +423,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     OutlinedTextField(
                         value = keyInput,
                         onValueChange = { keyInput = it },
-                        label = { Text("Replace or Paste New API Key") },
+                        label = { Text(strings.apiKeyLabel) },
                         visualTransformation = PasswordVisualTransformation(),
                         shape = ZCalShapes.Input,
                         modifier = Modifier.fillMaxWidth()
@@ -443,14 +439,14 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                             shape = ZCalShapes.Pill,
                             colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
                         ) {
-                            Text("Verify & Save", color = colors.onAccent)
+                            Text(strings.verifyAndSaveBtn, color = colors.onAccent)
                         }
                         if (maskedKey != null) {
                             OutlinedButton(
                                 onClick = { viewModel.removeCurrentKey() },
                                 shape = ZCalShapes.Pill
                             ) {
-                                Text("Remove Key")
+                                Text(strings.removeKeyBtn)
                             }
                         }
                     }
@@ -462,23 +458,23 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     modelChoices?.let { choices ->
                         AlertDialog(
                             onDismissRequest = { viewModel.dismissModelChoices() },
-                            title = { Text("Choose a model") },
+                            title = { Text(strings.chooseModelDialogTitle) },
                             text = {
                                 Column(
                                     modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     TextButton(onClick = { modelEdit = ModelSelector.AUTO; viewModel.dismissModelChoices() }) {
-                                        Text("Auto (recommended): ZCal picks the best for food photos")
+                                        Text(strings.autoRecommended)
                                     }
                                     if (choices.recommended.isNotEmpty()) {
-                                        Text("Suited to food photos, best first", style = ZCalTypeScale.Label, color = colors.textSecondary)
+                                        Text(strings.suitedForFood, style = ZCalTypeScale.Label, color = colors.textSecondary)
                                         choices.recommended.forEach { id ->
                                             TextButton(onClick = { modelEdit = id; viewModel.dismissModelChoices() }) { Text(id) }
                                         }
                                     }
                                     if (choices.others.isNotEmpty()) {
-                                        Text("Other models on this key", style = ZCalTypeScale.Label, color = colors.textSecondary)
+                                        Text(strings.otherModels, style = ZCalTypeScale.Label, color = colors.textSecondary)
                                         choices.others.forEach { id ->
                                             TextButton(onClick = { modelEdit = id; viewModel.dismissModelChoices() }) { Text(id) }
                                         }
@@ -486,7 +482,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                 }
                             },
                             confirmButton = {
-                                TextButton(onClick = { viewModel.dismissModelChoices() }) { Text("Close") }
+                                TextButton(onClick = { viewModel.dismissModelChoices() }) { Text(strings.closeBtn) }
                             }
                         )
                     }
@@ -504,12 +500,12 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        "Personal AI Calibration: ${if (profile.personalCalibrationPct >= 0) "+" else ""}${profile.personalCalibrationPct}%",
+                        "${strings.personalCalibrationTitle}: ${if (profile.personalCalibrationPct >= 0) "+" else ""}${profile.personalCalibrationPct}%",
                         style = ZCalTypeScale.Title,
                         color = colors.textPrimary
                     )
                     Text(
-                        "Scales AI meal estimates up or down to account for systematic portion or oil differences.",
+                        strings.personalCalibrationDesc,
                         style = ZCalTypeScale.Label,
                         color = colors.textSecondary
                     )
@@ -531,42 +527,48 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 border = BorderStroke(1.dp, colors.outline)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Theme & Mindful Display", style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    Text(strings.themeAndDisplayTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ThemePreference.entries.forEach { t ->
+                            val themeLabel = when(t) {
+                                ThemePreference.SYSTEM -> strings.system
+                                ThemePreference.LIGHT -> strings.light
+                                ThemePreference.DARK -> strings.dark
+                                ThemePreference.AMOLED -> strings.amoled
+                            }
                             FilterChip(
                                 selected = themePref == t,
                                 onClick = { viewModel.setTheme(t) },
-                                label = { Text(t.name) }
+                                label = { Text(themeLabel) }
                             )
                         }
                     }
 
                     SettingsToggleRow(
-                        title = "Calm Calendar Palette",
-                        subtitle = "Uses gentle green tints only instead of amber/coral on off-goal days",
+                        title = strings.calmCalendarPalette,
+                        subtitle = strings.calmCalendarDesc,
                         checked = calmPalette,
                         onCheckedChange = { viewModel.setCalmPalette(it) }
                     )
 
                     SettingsToggleRow(
-                        title = "Forgive 1 Missed Day per Week",
-                        subtitle = "Keeps your logging streak alive if you miss a single day in a 7-day window",
+                        title = strings.forgiveOneDayTitle,
+                        subtitle = strings.forgiveOneDayDesc,
                         checked = forgiveOneDay,
                         onCheckedChange = { viewModel.setForgiveOneDay(it) }
                     )
 
                     SettingsToggleRow(
-                        title = "Hide Calorie Numbers & Streaks",
-                        subtitle = "Focus on mindful photo food journaling without numeric totals",
+                        title = strings.hideNumbersTitle,
+                        subtitle = strings.hideNumbersDesc,
                         checked = hideNumbers,
                         onCheckedChange = { viewModel.setHideNumbers(it) }
                     )
 
                     SettingsToggleRow(
-                        title = "Wallpaper Dynamic Colors (Android 12+)",
-                        subtitle = "Applies system accent while keeping P/C/F macro colors fixed",
+                        title = strings.dynamicColorTitle,
+                        subtitle = strings.dynamicColorDesc,
                         checked = dynamicColor,
                         onCheckedChange = { viewModel.setDynamicColor(it) }
                     )
@@ -583,25 +585,25 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 border = BorderStroke(1.dp, colors.outline)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Your Data & Attribution", style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    Text(strings.dataAndAttributionTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(
                             onClick = { viewModel.exportJsonBackup(context) },
                             shape = ZCalShapes.Pill,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Export JSON Backup")
+                            Text(strings.exportBackupBtn)
                         }
                         OutlinedButton(
                             onClick = { viewModel.resetAllData() },
                             shape = ZCalShapes.Pill,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Reset Local Log", color = colors.error)
+                            Text(strings.resetLogBtn, color = colors.error)
                         }
                     }
                     Text(
-                        text = "Packaged food barcode data is sourced from Open Food Facts under the Open Database License (ODbL). Estimates are for informational tracking only and are not medical advice.",
+                        text = strings.attributionNote,
                         style = ZCalTypeScale.Label,
                         color = colors.textSecondary
                     )

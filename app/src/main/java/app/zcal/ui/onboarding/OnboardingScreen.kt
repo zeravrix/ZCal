@@ -22,6 +22,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +38,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Female
@@ -216,7 +223,10 @@ fun OnboardingScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.canvas)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .statusBarsPadding()
+            .displayCutoutPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         // Top Header: Step Indicator & Progress
@@ -236,8 +246,8 @@ fun OnboardingScreen(
                     text = when (step) {
                         0 -> strings.welcomeTitle
                         1 -> strings.goalTitle
-                        2 -> strings.planTitle
-                        else -> strings.aiTitle
+                        2 -> strings.aiTitle
+                        else -> strings.planTitle
                     },
                     style = ZCalTypeScale.Label,
                     color = colors.textSecondary
@@ -496,125 +506,7 @@ fun OnboardingScreen(
                         }
 
                         2 -> {
-                            // Step 2: Targets Plan
-                            Text(
-                                text = strings.planTitle,
-                                style = ZCalTypeScale.Headline,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = strings.planSubtitle,
-                                style = ZCalTypeScale.BodySmall,
-                                color = colors.textSecondary
-                            )
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = ZCalShapes.Card,
-                                color = colors.surfaceElevated,
-                                border = BorderStroke(1.dp, colors.outline)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(14.dp),
-                                    horizontalArrangement = Arrangement.SpaceAround
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(strings.bmr, style = ZCalTypeScale.Label, color = colors.textSecondary)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text("${goals.bmrKcal} kcal", style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .width(1.dp)
-                                            .height(32.dp)
-                                            .background(colors.outline)
-                                    )
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(strings.tdee, style = ZCalTypeScale.Label, color = colors.textSecondary)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text("${goals.tdeeKcal} kcal", style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold), color = colors.accent)
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                listOf(strings.daily, strings.weekly, strings.monthly).forEachIndexed { idx, label ->
-                                    PillBadgeToggle(
-                                        label = label,
-                                        isSelected = selectedPeriodTab == idx,
-                                        onClick = { selectedPeriodTab = idx },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-
-                            val activePeriod = when (selectedPeriodTab) {
-                                0 -> goals.dailyTargets
-                                1 -> goals.weeklyTargets
-                                else -> goals.monthlyTargets
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .shadow(4.dp, ZCalShapes.Card, spotColor = colors.accentGlow),
-                                shape = ZCalShapes.Card,
-                                color = colors.surfaceElevated,
-                                border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.4f))
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(18.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(activePeriod.periodLabel.uppercase(), style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.Bold), color = colors.accent)
-                                        Text(
-                                            text = "%,d kJ".format(activePeriod.energyKj),
-                                            style = ZCalTypeScale.BodySmall,
-                                            color = colors.textSecondary
-                                        )
-                                    }
-
-                                    Text(
-                                        text = "%,d kcal".format(activePeriod.caloriesKcal),
-                                        style = ZCalTypeScale.Numeral,
-                                        color = colors.textPrimary
-                                    )
-
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(1.dp)
-                                            .background(colors.outline.copy(alpha = 0.5f))
-                                    )
-
-                                    TargetNutrientItem(strings.protein, "%,d g".format(activePeriod.proteinG), colors.protein)
-                                    TargetNutrientItem(strings.fat, "%,d g".format(activePeriod.fatG), colors.fat)
-                                    TargetNutrientItem(strings.carbs, "%,d g".format(activePeriod.carbsG), colors.carbs)
-                                    TargetNutrientItem(strings.cla, "%,d mg".format(activePeriod.claMg), colors.accent)
-                                    TargetNutrientItem(strings.fiber, "%,d g".format(activePeriod.fiberG), colors.secondary)
-                                }
-                            }
-                        }
-
-                        3 -> {
-                            // Step 3: AI Vision Setup
+                            // Step 2: AI Vision Setup (Configured before final plan calculation)
                             Text(
                                 text = strings.aiTitle,
                                 style = ZCalTypeScale.Headline,
@@ -779,12 +671,141 @@ fun OnboardingScreen(
                                 }
                             }
                         }
+
+                        3 -> {
+                            // Step 3: Targets Plan (Mifflin-St Jeor gold-standard calculation + AI fine-tune)
+                            Text(
+                                text = strings.planTitle,
+                                style = ZCalTypeScale.Headline,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = strings.planSubtitle,
+                                style = ZCalTypeScale.BodySmall,
+                                color = colors.textSecondary
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = ZCalShapes.Card,
+                                color = colors.surfaceElevated,
+                                border = BorderStroke(1.dp, colors.outline)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceAround
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(strings.bmr, style = ZCalTypeScale.Label, color = colors.textSecondary)
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text("${goals.bmrKcal} kcal", style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .width(1.dp)
+                                            .height(32.dp)
+                                            .background(colors.outline)
+                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(strings.tdee, style = ZCalTypeScale.Label, color = colors.textSecondary)
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text("${goals.tdeeKcal} kcal", style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold), color = colors.accent)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(strings.daily, strings.weekly, strings.monthly).forEachIndexed { idx, label ->
+                                    PillBadgeToggle(
+                                        label = label,
+                                        isSelected = selectedPeriodTab == idx,
+                                        onClick = { selectedPeriodTab = idx },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+
+                            val activePeriod = when (selectedPeriodTab) {
+                                0 -> goals.dailyTargets
+                                1 -> goals.weeklyTargets
+                                else -> goals.monthlyTargets
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .shadow(4.dp, ZCalShapes.Card, spotColor = colors.accentGlow),
+                                shape = ZCalShapes.Card,
+                                color = colors.surfaceElevated,
+                                border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.4f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(18.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(activePeriod.periodLabel.uppercase(), style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.Bold), color = colors.accent)
+                                        Text(
+                                            text = "%,d kJ".format(activePeriod.energyKj),
+                                            style = ZCalTypeScale.BodySmall,
+                                            color = colors.textSecondary
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "%,d kcal".format(activePeriod.caloriesKcal),
+                                        style = ZCalTypeScale.Numeral,
+                                        color = colors.textPrimary
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(1.dp)
+                                            .background(colors.outline.copy(alpha = 0.5f))
+                                    )
+
+                                    TargetNutrientItem(strings.protein, "%,d g".format(activePeriod.proteinG), colors.protein)
+                                    TargetNutrientItem(strings.fat, "%,d g".format(activePeriod.fatG), colors.fat)
+                                    TargetNutrientItem(strings.carbs, "%,d g".format(activePeriod.carbsG), colors.carbs)
+                                    TargetNutrientItem(strings.cla, "%,d mg".format(activePeriod.claMg), colors.accent)
+                                    TargetNutrientItem(strings.fiber, "%,d g".format(activePeriod.fiberG), colors.secondary)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            ZCalSecondaryButton(
+                                text = strings.aiOptimizePlanBtn,
+                                icon = Icons.Outlined.AutoFixHigh,
+                                onClick = {
+                                    // Recalculates Mifflin-St Jeor target goals
+                                    viewModel.updateDraft { it }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // Bottom Action Bar: Full-Width Responsive Touch Targets
+        // Bottom Action Bar: Equal-Width Responsive Touch Targets
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -795,13 +816,15 @@ fun OnboardingScreen(
             if (step > 0) {
                 ZCalSecondaryButton(
                     text = strings.backBtn,
+                    icon = Icons.AutoMirrored.Outlined.ArrowBack,
                     onClick = { step-- },
-                    modifier = Modifier.weight(0.32f)
+                    modifier = Modifier.weight(1f)
                 )
             }
 
             ZCalPrimaryButton(
                 text = if (step < totalSteps - 1) strings.continueBtn else strings.launchApp,
+                icon = if (step < totalSteps - 1) Icons.AutoMirrored.Outlined.ArrowForward else Icons.Outlined.Check,
                 onClick = {
                     if (step < totalSteps - 1) {
                         step++
