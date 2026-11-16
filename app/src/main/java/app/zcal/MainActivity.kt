@@ -24,14 +24,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import app.zcal.domain.model.AppLanguage
+import app.zcal.ui.localization.LocalZCalStrings
+import app.zcal.ui.localization.ZCalStrings
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
@@ -81,16 +87,23 @@ class MainActivity : ComponentActivity() {
             val profile by profileRepository.userProfileFlow.collectAsState(initial = null)
             val themePref by profileRepository.themePreferenceFlow.collectAsState(initial = app.zcal.domain.model.ThemePreference.SYSTEM)
             val dynamicColor by profileRepository.dynamicColorFlow.collectAsState(initial = false)
+            val language by profileRepository.languageFlow.collectAsState(initial = AppLanguage.ENGLISH)
 
-            ZCalTheme(
-                themePreference = themePref,
-                dynamicColorEnabled = dynamicColor
+            val layoutDirection = if (language.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+            CompositionLocalProvider(
+                LocalLayoutDirection provides layoutDirection,
+                LocalZCalStrings provides ZCalStrings.forLanguage(language)
             ) {
-                val currentProfile = profile
-                if (currentProfile == null) {
-                    ZCalBootScreen()
-                    return@ZCalTheme
-                }
+                ZCalTheme(
+                    themePreference = themePref,
+                    dynamicColorEnabled = dynamicColor
+                ) {
+                    val currentProfile = profile
+                    if (currentProfile == null) {
+                        ZCalBootScreen()
+                        return@ZCalTheme
+                    }
                 val navController = rememberNavController()
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
@@ -135,10 +148,18 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("review")
                                 },
                                 onOpenHistoryCache = {
-                                    navController.navigate(BottomNavTab.CACHE.route)
+                                    navController.navigate(BottomNavTab.CACHE.route) {
+                                        popUpTo(BottomNavTab.CAMERA.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 },
                                 onOpenSettingsForKey = {
-                                    navController.navigate(BottomNavTab.SETTINGS.route)
+                                    navController.navigate(BottomNavTab.SETTINGS.route) {
+                                        popUpTo(BottomNavTab.CAMERA.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             )
                         }
@@ -152,7 +173,12 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onLaunchCamera = {
                                     sharedReviewViewModel.resetToIdle()
-                                    navController.navigate(BottomNavTab.CAMERA.route)
+                                    if (!navController.popBackStack(BottomNavTab.CAMERA.route, false)) {
+                                        navController.navigate(BottomNavTab.CAMERA.route) {
+                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                            launchSingleTop = true
+                                        }
+                                    }
                                 }
                             )
                         }
@@ -176,8 +202,10 @@ class MainActivity : ComponentActivity() {
                             ReviewMealScreen(
                                 viewModel = sharedReviewViewModel,
                                 onSaved = {
+                                    sharedReviewViewModel.resetToIdle()
                                     navController.navigate(BottomNavTab.HOME.route) {
                                         popUpTo(BottomNavTab.CAMERA.route) { inclusive = false }
+                                        launchSingleTop = true
                                     }
                                 },
                                 onBack = {
@@ -211,8 +239,11 @@ class MainActivity : ComponentActivity() {
                             onScanClicked = {
                                 sharedReviewViewModel.resetToIdle()
                                 if (currentRoute != BottomNavTab.CAMERA.route) {
-                                    navController.navigate(BottomNavTab.CAMERA.route) {
-                                        popUpTo(BottomNavTab.CAMERA.route) { inclusive = true }
+                                    if (!navController.popBackStack(BottomNavTab.CAMERA.route, false)) {
+                                        navController.navigate(BottomNavTab.CAMERA.route) {
+                                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                            launchSingleTop = true
+                                        }
                                     }
                                 }
                             },
@@ -223,6 +254,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 }
 
 /**

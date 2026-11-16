@@ -7,6 +7,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material3.Icon
+import app.zcal.domain.model.AppLanguage
+import app.zcal.ui.localization.LocalZCalStrings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.PaddingValues
@@ -108,6 +119,13 @@ class SettingsViewModel @Inject constructor(
 
     val hideNumbers: StateFlow<Boolean> = profileRepository.hideNumbersFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val appLanguage: StateFlow<AppLanguage> = profileRepository.languageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppLanguage.ENGLISH)
+
+    fun setLanguage(lang: AppLanguage) {
+        viewModelScope.launch { profileRepository.saveLanguage(lang) }
+    }
 
     private val _verifyMessage = MutableStateFlow<String?>(null)
     val verifyMessage: StateFlow<String?> = _verifyMessage.asStateFlow()
@@ -244,11 +262,14 @@ class SettingsViewModel @Inject constructor(
  * - Calm Calendar Palette & Hide Numbers/Streaks toggles (Section 10 & 11)
  * - JSON / CSV Backup & Open Food Facts ODbL Attribution
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     val context = LocalContext.current
 
+    val appLang by viewModel.appLanguage.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val provider by viewModel.activeProvider.collectAsState()
     val modelId by viewModel.activeModelId.collectAsState()
@@ -276,7 +297,57 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Text("Settings", style = ZCalTypeScale.Headline, color = colors.textPrimary)
+            Text(strings.settings, style = ZCalTypeScale.Headline, color = colors.textPrimary)
+        }
+
+        // Language Selector Card (8 Languages)
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ZCalShapes.Card,
+                color = colors.surfaceElevated,
+                shadowElevation = 2.dp,
+                border = BorderStroke(1.dp, colors.outline)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Language,
+                            contentDescription = null,
+                            tint = colors.accent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(strings.language, style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    }
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AppLanguage.entries.forEach { lang ->
+                            val isSel = appLang == lang
+                            Surface(
+                                modifier = Modifier
+                                    .clip(ZCalShapes.Pill)
+                                    .clickable { viewModel.setLanguage(lang) },
+                                shape = ZCalShapes.Pill,
+                                color = if (isSel) colors.accent else colors.surfaceVariant,
+                                border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
+                            ) {
+                                Text(
+                                    text = "${lang.nativeTitle} (${lang.title})",
+                                    style = ZCalTypeScale.Label.copy(fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal),
+                                    color = if (isSel) colors.onAccent else colors.textPrimary,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // 1. AI Provider & Android Keystore Key Vault

@@ -57,6 +57,7 @@ class ProfileRepository @Inject constructor(
         private val KEY_FORGIVE_ONE_DAY = booleanPreferencesKey("forgive_one_missed_day_per_week")
         private val KEY_HIDE_NUMBERS = booleanPreferencesKey("hide_numbers_and_streaks")
         private val KEY_PRIVACY_DISCLOSED = booleanPreferencesKey("privacy_disclosed_before_scan")
+        private val KEY_LANGUAGE = stringPreferencesKey("app_language")
     }
 
     val userProfileFlow: Flow<UserProfile> = context.userPrefsDataStore.data.map { prefs ->
@@ -107,6 +108,17 @@ class ProfileRepository @Inject constructor(
 
     val privacyDisclosedFlow: Flow<Boolean> = context.userPrefsDataStore.data.map { prefs ->
         prefs[KEY_PRIVACY_DISCLOSED] ?: false
+    }
+
+    val languageFlow: Flow<app.zcal.domain.model.AppLanguage> = context.userPrefsDataStore.data.map { prefs ->
+        val code = prefs[KEY_LANGUAGE] ?: "en"
+        app.zcal.domain.model.AppLanguage.fromCode(code)
+    }
+
+    suspend fun saveLanguage(language: app.zcal.domain.model.AppLanguage) {
+        context.userPrefsDataStore.edit { prefs ->
+            prefs[KEY_LANGUAGE] = language.code
+        }
     }
 
     suspend fun saveUserProfile(profile: UserProfile) {

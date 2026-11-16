@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.zcal.ui.localization.LocalZCalStrings
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 
@@ -194,8 +195,17 @@ private fun InteractiveNavIconItem(
     onClick: () -> Unit
 ) {
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+
+    val labelText = when (tab) {
+        BottomNavTab.HOME -> strings.dashboard
+        BottomNavTab.CACHE -> strings.history
+        BottomNavTab.CAMERA -> strings.scan
+        BottomNavTab.PROGRESS -> strings.progress
+        BottomNavTab.SETTINGS -> strings.settings
+    }
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.88f else if (selected) 1.05f else 1f,
@@ -242,7 +252,7 @@ private fun InteractiveNavIconItem(
         Spacer(modifier = Modifier.height(2.dp))
 
         Text(
-            text = tab.label,
+            text = labelText,
             fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             color = if (selected) colors.accent else colors.textSecondary

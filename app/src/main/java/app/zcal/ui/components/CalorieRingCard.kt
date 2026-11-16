@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.zcal.ui.localization.LocalZCalStrings
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
@@ -47,6 +48,7 @@ fun CalorieRingCard(
     modifier: Modifier = Modifier
 ) {
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     val safeGoal = goalCalories.coerceAtLeast(1)
     val rawRatio = eatenCalories.toFloat() / safeGoal.toFloat()
     val primarySweepRatio = rawRatio.coerceIn(0f, 1f)
@@ -135,7 +137,7 @@ fun CalorieRingCard(
                         color = colors.textPrimary
                     )
                     Text(
-                        text = if (remaining >= 0) "KCAL LEFT" else "KCAL OVER",
+                        text = if (remaining >= 0) strings.kcalLeft else strings.kcalOver,
                         style = ZCalTypeScale.Label,
                         color = colors.textSecondary
                     )
@@ -156,7 +158,7 @@ fun CalorieRingCard(
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Eaten",
+                            text = strings.eaten,
                             style = ZCalTypeScale.Label,
                             color = colors.textSecondary
                         )
@@ -168,7 +170,7 @@ fun CalorieRingCard(
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Daily Goal",
+                            text = strings.dailyGoal,
                             style = ZCalTypeScale.Label,
                             color = colors.textSecondary
                         )

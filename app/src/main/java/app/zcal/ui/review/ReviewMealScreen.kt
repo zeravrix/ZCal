@@ -1,6 +1,7 @@
 package app.zcal.ui.review
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -482,6 +483,10 @@ fun ReviewMealScreen(
     onSaved: () -> Unit,
     onBack: () -> Unit
 ) {
+    BackHandler {
+        onBack()
+    }
+
     val colors = LocalZCalColors.current
     val haptic = LocalHapticFeedback.current
     val meal by viewModel.draftMeal.collectAsState()

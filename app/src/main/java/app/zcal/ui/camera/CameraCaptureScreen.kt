@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,7 +41,8 @@ import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.QrCodeScanner
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -51,6 +53,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.Dialog
+import app.zcal.ui.components.ZCalPrimaryButton
+import app.zcal.ui.components.ZCalSecondaryButton
+import app.zcal.ui.localization.LocalZCalStrings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,7 +92,11 @@ import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
 import app.zcal.util.ImageResizer
 import app.zcal.worker.PendingScanWorker
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -110,6 +120,7 @@ fun CameraCaptureScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
 
     val workflowState by reviewViewModel.workflowState.collectAsState()
     val privacyDisclosed by reviewViewModel.privacyDisclosed.collectAsState()
@@ -168,9 +179,14 @@ fun CameraCaptureScreen(
                 uri = uri,
                 barcodeMode = barcodeMode,
                 userNote = userHintNote,
-                reviewViewModel = reviewViewModel
+                reviewViewModel = reviewViewModel,
+                scope = scope
             )
         }
+    }
+
+    BackHandler(enabled = workflowState !is CaptureWorkflowState.Idle) {
+        reviewViewModel.resetToIdle()
     }
 
     LaunchedEffect(workflowState) {
@@ -179,25 +195,62 @@ fun CameraCaptureScreen(
         }
     }
 
+    val strings = LocalZCalStrings.current
+
     if (!privacyDisclosed) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Before Your First Scan") },
-            text = {
-                Text(
-                    "On Google's free tier, your photos and notes may be used to improve Google products. " +
-                        "Use a billing-enabled key if you do not want that. Everything else (your meal log, goals, steps, and 30-day cache) stays on your phone."
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { reviewViewModel.acknowledgePrivacyDisclosure() },
-                    shape = ZCalShapes.Pill
+        Dialog(onDismissRequest = {}) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                shape = ZCalShapes.Dialog,
+                color = colors.surfaceElevated,
+                shadowElevation = 10.dp,
+                border = BorderStroke(1.dp, colors.outline)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text("Got It")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(ZCalShapes.Chip)
+                                .background(colors.accent.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Shield,
+                                contentDescription = null,
+                                tint = colors.accent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Text(
+                            text = strings.privacyNoticeTitle,
+                            style = ZCalTypeScale.Title,
+                            color = colors.textPrimary
+                        )
+                    }
+
+                    Text(
+                        text = strings.privacyNoticeBody,
+                        style = ZCalTypeScale.BodySmall,
+                        color = colors.textSecondary
+                    )
+
+                    ZCalPrimaryButton(
+                        text = strings.gotIt,
+                        onClick = { reviewViewModel.acknowledgePrivacyDisclosure() },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
-        )
+        }
     }
 
     Box(
@@ -444,7 +497,8 @@ fun CameraCaptureScreen(
                                                 uri = Uri.fromFile(tempFile),
                                                 barcodeMode = barcodeMode,
                                                 userNote = userHintNote,
-                                                reviewViewModel = reviewViewModel
+                                                reviewViewModel = reviewViewModel,
+                                                scope = scope
                                             )
                                         }
 
@@ -535,29 +589,79 @@ fun CameraCaptureScreen(
             }
 
             is CaptureWorkflowState.ReadyForReview -> {
+                LaunchedEffect(Unit) {
+                    reviewViewModel.resetToIdle()
+                }
             }
         }
     }
 
     if (showNoteDialog) {
-        AlertDialog(
-            onDismissRequest = { showNoteDialog = false },
-            title = { Text("Add Meal Hint for AI") },
-            text = {
-                OutlinedTextField(
-                    value = userHintNote,
-                    onValueChange = { userHintNote = it },
-                    label = { Text("e.g. Two eggs in 1 tbsp olive oil, whole wheat toast") },
-                    shape = ZCalShapes.Input,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(onClick = { showNoteDialog = false }, shape = ZCalShapes.Pill) {
-                    Text("Done")
+        Dialog(onDismissRequest = { showNoteDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                shape = ZCalShapes.Dialog,
+                color = colors.surfaceElevated,
+                shadowElevation = 10.dp,
+                border = BorderStroke(1.dp, colors.outline)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(ZCalShapes.Chip)
+                                .background(colors.accent.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.EditNote,
+                                contentDescription = null,
+                                tint = colors.accent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Text(
+                            text = strings.addMealNote,
+                            style = ZCalTypeScale.Title,
+                            color = colors.textPrimary
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = userHintNote,
+                        onValueChange = { userHintNote = it },
+                        placeholder = { Text(strings.noteHint, style = ZCalTypeScale.BodySmall) },
+                        shape = ZCalShapes.Input,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ZCalSecondaryButton(
+                            text = strings.cancel,
+                            onClick = { showNoteDialog = false },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ZCalPrimaryButton(
+                            text = strings.save,
+                            onClick = { showNoteDialog = false },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
-        )
+        }
     }
 }
 
@@ -566,32 +670,41 @@ private fun handleCapturedUri(
     uri: Uri,
     barcodeMode: Boolean,
     userNote: String,
-    reviewViewModel: ReviewViewModel
+    reviewViewModel: ReviewViewModel,
+    scope: CoroutineScope
 ) {
-    val resizedFile = ImageResizer.processAndSaveMealImage(context, uri)
-    if (barcodeMode) {
-        runCatching {
-            val image = InputImage.fromFilePath(context, uri)
-            val scanner = BarcodeScanning.getClient()
-            scanner.process(image)
-                .addOnSuccessListener { barcodes ->
-                    val rawValue = barcodes.firstOrNull()?.rawValue
-                    if (!rawValue.isNullOrBlank()) {
-                        reviewViewModel.analyzeBarcodeString(rawValue, fallbackPhoto = resizedFile)
-                    } else if (resizedFile != null) {
-                        reviewViewModel.analyzePhotoFile(resizedFile, userNote)
+    scope.launch(Dispatchers.IO) {
+        val resizedFile = ImageResizer.processAndSaveMealImage(context, uri)
+        if (barcodeMode) {
+            runCatching {
+                val image = InputImage.fromFilePath(context, uri)
+                val scanner = BarcodeScanning.getClient()
+                scanner.process(image)
+                    .addOnSuccessListener { barcodes ->
+                        val rawValue = barcodes.firstOrNull()?.rawValue
+                        if (!rawValue.isNullOrBlank()) {
+                            reviewViewModel.analyzeBarcodeString(rawValue, fallbackPhoto = resizedFile)
+                        } else if (resizedFile != null) {
+                            reviewViewModel.analyzePhotoFile(resizedFile, userNote)
+                        }
                     }
-                }
-                .addOnFailureListener {
-                    if (resizedFile != null) {
-                        reviewViewModel.analyzePhotoFile(resizedFile, userNote)
+                    .addOnFailureListener {
+                        if (resizedFile != null) {
+                            reviewViewModel.analyzePhotoFile(resizedFile, userNote)
+                        }
                     }
+            }.onFailure {
+                if (resizedFile != null) {
+                    reviewViewModel.analyzePhotoFile(resizedFile, userNote)
+                } else {
+                    reviewViewModel.startManualFallback(userNote)
                 }
+            }
+        } else if (resizedFile != null) {
+            reviewViewModel.analyzePhotoFile(resizedFile, userNote)
+        } else {
+            reviewViewModel.startManualFallback(userNote)
         }
-    } else if (resizedFile != null) {
-        reviewViewModel.analyzePhotoFile(resizedFile, userNote)
-    } else {
-        reviewViewModel.startManualFallback(userNote)
     }
 }
 

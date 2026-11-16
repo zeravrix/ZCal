@@ -29,20 +29,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
 
 /**
- * Enterprise-grade, alive interactive CTA button with:
- * - Full-width touch target (56dp height)
- * - Tactile spring scale bounce on press (1.0 -> 0.975 -> 1.0)
- * - Vibrant gradient accent fill with colored ambient glow
- * - Smooth loading state indicator
+ * Premium, non-slop tactile button with:
+ * - 52dp comfortable touch target height
+ * - Tactile spring scale bounce on press
+ * - Clean text formatting that never wraps or mushes
+ * - Adaptive layout for small and large screens
  */
 @Composable
 fun ZCalPrimaryButton(
@@ -67,7 +68,7 @@ fun ZCalPrimaryButton(
         Brush.horizontalGradient(
             colors = listOf(
                 colors.accent,
-                colors.accent.copy(alpha = 0.88f)
+                colors.accent.copy(alpha = 0.90f)
             )
         )
     } else {
@@ -81,10 +82,9 @@ fun ZCalPrimaryButton(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
             .scale(scale)
             .shadow(
-                elevation = if (enabled && !isLoading) 6.dp else 0.dp,
+                elevation = if (enabled && !isLoading) 4.dp else 0.dp,
                 shape = ZCalShapes.Pill,
                 spotColor = colors.accentGlow,
                 ambientColor = colors.accentGlow
@@ -101,15 +101,14 @@ fun ZCalPrimaryButton(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 24.dp),
+                .height(52.dp)
+                .padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(22.dp),
                     color = colors.onAccent,
                     strokeWidth = 2.5.dp
                 )
@@ -119,13 +118,18 @@ fun ZCalPrimaryButton(
                         imageVector = icon,
                         contentDescription = null,
                         tint = if (enabled) colors.onAccent else colors.textSecondary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                 }
                 Text(
                     text = text,
-                    style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.Bold),
+                    style = ZCalTypeScale.Title.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = if (enabled) colors.onAccent else colors.textSecondary
                 )
             }
@@ -166,12 +170,12 @@ fun ZCalSecondaryButton(
             ),
         shape = ZCalShapes.Pill,
         color = if (isPressed) colors.surfaceVariant else colors.surfaceElevated,
-        border = BorderStroke(1.2.dp, colors.outline)
+        border = BorderStroke(1.dp, colors.outline)
     ) {
         Row(
             modifier = Modifier
-                .height(56.dp)
-                .padding(horizontal = 20.dp),
+                .height(52.dp)
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -186,7 +190,12 @@ fun ZCalSecondaryButton(
             }
             Text(
                 text = text,
-                style = ZCalTypeScale.Title.copy(fontWeight = FontWeight.SemiBold),
+                style = ZCalTypeScale.Title.copy(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 color = colors.textPrimary
             )
         }

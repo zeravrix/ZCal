@@ -73,6 +73,7 @@ import app.zcal.ui.components.MacroRowCards
 import app.zcal.ui.components.MealRowCard
 import app.zcal.ui.components.ZCalPrimaryButton
 import app.zcal.ui.components.ZCalSecondaryButton
+import app.zcal.ui.localization.LocalZCalStrings
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
@@ -237,6 +238,7 @@ fun HomeScreen(
     onLaunchCamera: () -> Unit
 ) {
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     val selectedDate by viewModel.selectedDate.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val hideNumbers by viewModel.hideNumbers.collectAsState()
@@ -291,7 +293,7 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Text("Daily Dashboard", style = ZCalTypeScale.Headline, color = colors.textPrimary)
+                            Text(strings.dashboard, style = ZCalTypeScale.Headline, color = colors.textPrimary)
                             Text(
                                 DateHelpers.formatFriendlyDate(selectedDate),
                                 style = ZCalTypeScale.BodySmall,
@@ -304,7 +306,7 @@ fun HomeScreen(
                         shape = ZCalShapes.Pill
                     ) {
                         Icon(Icons.Outlined.Add, contentDescription = null)
-                        Text("Manual Entry", modifier = Modifier.padding(start = 4.dp))
+                        Text(strings.manualEntry, modifier = Modifier.padding(start = 4.dp))
                     }
                 }
 
@@ -487,7 +489,7 @@ fun HomeScreen(
                                     contentDescription = null,
                                     tint = colors.accent
                                 )
-                                Text("Daily Score", style = ZCalTypeScale.Label, color = colors.textSecondary)
+                                Text(strings.dailyScore, style = ZCalTypeScale.Label, color = colors.textSecondary)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
@@ -520,7 +522,7 @@ fun HomeScreen(
                                     contentDescription = null,
                                     tint = colors.fat
                                 )
-                                Text("Hydration", style = ZCalTypeScale.Label, color = colors.textSecondary)
+                                Text(strings.hydration, style = ZCalTypeScale.Label, color = colors.textSecondary)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
@@ -543,7 +545,7 @@ fun HomeScreen(
 
             item {
                 Text(
-                    text = "Logged Meals (${meals.size})",
+                    text = "${strings.loggedMeals} (${meals.size})",
                     style = ZCalTypeScale.Title,
                     color = colors.textPrimary,
                     modifier = Modifier.padding(top = 4.dp)
@@ -566,13 +568,13 @@ fun HomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Nothing logged yet. Snap your first meal.",
+                                text = strings.noMealsYet,
                                 style = ZCalTypeScale.Body,
                                 color = colors.textSecondary
                             )
                             Spacer(modifier = Modifier.height(14.dp))
                             ZCalPrimaryButton(
-                                text = "Open Camera Scanner",
+                                text = strings.openCamera,
                                 onClick = onLaunchCamera,
                                 modifier = Modifier.fillMaxWidth(0.85f)
                             )
@@ -621,6 +623,7 @@ private fun ManualMealEntryBottomSheet(
     onSave: (String, Int, Double, Double, Double, MealType) -> Unit
 ) {
     val colors = LocalZCalColors.current
+    val strings = LocalZCalStrings.current
     var name by remember { mutableStateOf("") }
     var calories by remember { mutableStateOf("") }
     var protein by remember { mutableStateOf("") }
@@ -656,7 +659,7 @@ private fun ManualMealEntryBottomSheet(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Food / Meal Name") },
+                label = { Text(strings.foodName) },
                 shape = ZCalShapes.Input,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -698,7 +701,7 @@ private fun ManualMealEntryBottomSheet(
             }
 
             ZCalPrimaryButton(
-                text = "Save Meal",
+                text = strings.save,
                 onClick = {
                     onSave(
                         name.trim().ifEmpty { "Manual Meal" },
