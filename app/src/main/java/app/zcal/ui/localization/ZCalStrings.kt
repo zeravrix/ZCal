@@ -422,7 +422,16 @@ object ZCalStrings {
         noMealsOnDay = "لا توجد وجبات مسجلة في هذا اليوم.",
         markDayCompleteTitle = "تحديد اليوم كمكتمل",
         markDayCompleteDesc = "الأيام المكتملة فقط هي التي تدخل في حساب متوسطات الأهداف.",
-        aiOptimizePlanBtn = "تحسين الخطة بالذكاء الاصطناعي"
+        aiOptimizePlanBtn = "تحسين بالذكاء",
+        birthday = "تاريخ الميلاد",
+        day = "اليوم",
+        month = "الشهر",
+        year = "السنة",
+        bodyMetricsTitle = "قياسات الجسم والأهداف",
+        updateTargetsBtn = "تحديث الأهداف وحسابها",
+        targetWeightLabel = "الوزن المستهدف",
+        heightLabel = "الطول",
+        weightLabel = "الوزن"
     )
 
     private val fr = Translations(
@@ -583,7 +592,16 @@ object ZCalStrings {
         noMealsOnDay = "Aucun repas enregistré ce jour-là.",
         markDayCompleteTitle = "Marquer le jour complet",
         markDayCompleteDesc = "Seuls les jours complets comptent dans les moyennes.",
-        aiOptimizePlanBtn = "Optimiser mon plan avec l'IA"
+        aiOptimizePlanBtn = "Optimiser avec l'IA",
+        birthday = "Date de naissance",
+        day = "Jour",
+        month = "Mois",
+        year = "Année",
+        bodyMetricsTitle = "Mensurations & Objectifs",
+        updateTargetsBtn = "Recalculer les objectifs",
+        targetWeightLabel = "Poids cible",
+        heightLabel = "Taille",
+        weightLabel = "Poids"
     )
 
     private val es = Translations(
@@ -744,7 +762,16 @@ object ZCalStrings {
         noMealsOnDay = "No hay comidas registradas en este día.",
         markDayCompleteTitle = "Marcar Día Completo",
         markDayCompleteDesc = "Solo los días completos cuentan para los promedios.",
-        aiOptimizePlanBtn = "Optimizar Mi Plan con IA"
+        aiOptimizePlanBtn = "Optimizar con IA",
+        birthday = "Fecha de nacimiento",
+        day = "Día",
+        month = "Mes",
+        year = "Año",
+        bodyMetricsTitle = "Medidas y Objetivos",
+        updateTargetsBtn = "Recalcular objetivos",
+        targetWeightLabel = "Peso objetivo",
+        heightLabel = "Altura",
+        weightLabel = "Peso"
     )
 
     private val de = Translations(
@@ -905,7 +932,16 @@ object ZCalStrings {
         noMealsOnDay = "Keine Mahlzeiten an diesem Tag protokolliert.",
         markDayCompleteTitle = "Tag als abgeschlossen markieren",
         markDayCompleteDesc = "Nur vollständige Tage fließen in Ziel-Durchschnitte ein.",
-        aiOptimizePlanBtn = "Plan mit KI optimieren"
+        aiOptimizePlanBtn = "Mit KI optimieren",
+        birthday = "Geburtsdatum",
+        day = "Tag",
+        month = "Monat",
+        year = "Jahr",
+        bodyMetricsTitle = "Körpermaße & Zielwerte",
+        updateTargetsBtn = "Ziele neu berechnen",
+        targetWeightLabel = "Zielgewicht",
+        heightLabel = "Größe",
+        weightLabel = "Gewicht"
     )
 
     private val ja = Translations(
@@ -1066,7 +1102,16 @@ object ZCalStrings {
         noMealsOnDay = "この日の食事記録はありません。",
         markDayCompleteTitle = "この日を完了としてマーク",
         markDayCompleteDesc = "完了した日のみが目標達成の平均値計算に含まれます。",
-        aiOptimizePlanBtn = "AIでプランを最適化"
+        aiOptimizePlanBtn = "AIで目標最適化",
+        birthday = "生年月日",
+        day = "日",
+        month = "月",
+        year = "年",
+        bodyMetricsTitle = "身体データと目標",
+        updateTargetsBtn = "目標を再計算",
+        targetWeightLabel = "目標体重",
+        heightLabel = "身長",
+        weightLabel = "体重"
     )
 
     private val zh = Translations(
@@ -1227,7 +1272,16 @@ object ZCalStrings {
         noMealsOnDay = "当天暂无饮食记录。",
         markDayCompleteTitle = "将此日标记为已完成",
         markDayCompleteDesc = "仅完整记录的日期会纳入目标平均值统计。",
-        aiOptimizePlanBtn = "使用 AI 优化方案"
+        aiOptimizePlanBtn = "AI 优化目标",
+        birthday = "出生日期",
+        day = "日",
+        month = "月",
+        year = "年",
+        bodyMetricsTitle = "身体指标与目标",
+        updateTargetsBtn = "重新计算目标",
+        targetWeightLabel = "目标体重",
+        heightLabel = "身高",
+        weightLabel = "体重"
     )
 
     private val ko = Translations(
@@ -1388,7 +1442,16 @@ object ZCalStrings {
         noMealsOnDay = "이 날짜에 기록된 식사가 없습니다.",
         markDayCompleteTitle = "이 날을 완료로 표시",
         markDayCompleteDesc = "완료된 날짜만 목표 통계 평균 계산에 반영됩니다.",
-        aiOptimizePlanBtn = "AI로 맞춤 플랜 최적화"
+        aiOptimizePlanBtn = "AI 목표 최적화",
+        birthday = "생년월일",
+        day = "일",
+        month = "월",
+        year = "년",
+        bodyMetricsTitle = "신체 측정 및 목표",
+        updateTargetsBtn = "목표 재계산",
+        targetWeightLabel = "목표 체중",
+        heightLabel = "키",
+        weightLabel = "체중"
     )
 
     fun forLanguage(lang: AppLanguage): Translations {

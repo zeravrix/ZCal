@@ -129,6 +129,12 @@ class ZCalUnitTests {
     }
 
     @Test
+    fun `ModelSelector ranks gemini-4-hydrogen at the top of workhorse models`() {
+        val ids = listOf("gemini-3.8-flash", "gemini-4-hydrogen", "gemini-2.5-flash")
+        assertEquals("gemini-4-hydrogen", ModelSelector.pickBest(AiProviderType.GEMINI, ids, allowPreview = false))
+    }
+
+    @Test
     fun `AiProviderType Gemini defaults to gemini-3_8-flash fallback`() {
         assertEquals("gemini-3.8-flash", AiProviderType.GEMINI.fallbackModel)
     }

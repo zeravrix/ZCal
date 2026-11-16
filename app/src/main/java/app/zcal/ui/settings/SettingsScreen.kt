@@ -26,11 +26,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import app.zcal.domain.model.UnitSystem
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -111,6 +114,13 @@ class SettingsViewModel @Inject constructor(
             )
             profileRepository.saveUserProfile(finalProfile)
             _verifyMessage.value = "Body metrics & metabolic targets updated!"
+        }
+    }
+
+    fun setUnitSystem(units: UnitSystem) {
+        viewModelScope.launch {
+            val current = userProfile.value
+            profileRepository.saveUserProfile(current.copy(units = units))
         }
     }
 
@@ -329,7 +339,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.canvas),
+            .background(colors.canvas)
+            .statusBarsPadding()
+            .displayCutoutPadding(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -464,7 +476,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     )
 
                     val quickModels = if (provider == AiProviderType.GEMINI) {
-                        listOf("auto", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.8-pro")
+                        listOf("auto", "gemini-4-hydrogen", "gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash")
                     } else {
                         listOf("auto", "gpt-4o-mini", "gpt-4.1-mini")
                     }
@@ -628,9 +640,20 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
         // Body Measurements & Long-Term Metabolic Target Recalculation
         item {
-            var editWeight by remember(profile.weightKg) { mutableStateOf(profile.weightKg.toString()) }
-            var editHeight by remember(profile.heightCm) { mutableStateOf(profile.heightCm.roundToInt().toString()) }
-            var editTargetWeight by remember(profile.targetWeightKg) { mutableStateOf(profile.targetWeightKg.toString()) }
+            val isImperial = profile.units == UnitSystem.IMPERIAL
+            val displayWeight = if (isImperial) profile.weightKg * 2.20462 else profile.weightKg
+            val displayHeight = if (isImperial) profile.heightCm / 2.54 else profile.heightCm
+            val displayTargetWeight = if (isImperial) profile.targetWeightKg * 2.20462 else profile.targetWeightKg
+
+            var editWeight by remember(profile.weightKg, isImperial) {
+                mutableStateOf(String.format(java.util.Locale.US, "%.1f", displayWeight))
+            }
+            var editHeight by remember(profile.heightCm, isImperial) {
+                mutableStateOf(displayHeight.roundToInt().toString())
+            }
+            var editTargetWeight by remember(profile.targetWeightKg, isImperial) {
+                mutableStateOf(String.format(java.util.Locale.US, "%.1f", displayTargetWeight))
+            }
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -639,9 +662,58 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 border = BorderStroke(1.dp, colors.outline)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(strings.bodyMetricsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(strings.bodyMetricsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+                    }
+
+                    // Unit System Switcher
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        UnitSystem.entries.forEach { u ->
+                            val selected = profile.units == u
+                            Surface(
+                                shape = ZCalShapes.Pill,
+                                color = if (selected) colors.accent else colors.surfaceElevated,
+                                border = BorderStroke(1.dp, if (selected) colors.accent else colors.outline),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp)
+                                    .clickable { viewModel.setUnitSystem(u) }
+                            ) {
+                                androidx.compose.foundation.layout.Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Text(
+                                        text = if (u == UnitSystem.METRIC) strings.metric else strings.imperial,
+                                        style = ZCalTypeScale.Label.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium),
+                                        color = if (selected) colors.onAccent else colors.textPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Text(
-                        text = "Current: ${profile.weightKg} kg • ${profile.heightCm.roundToInt()} cm • Calorie Target: %,d kcal".format(profile.calorieGoal),
+                        text = if (isImperial) {
+                            "Current: %.1f lbs • %d in • Calorie Target: %,d kcal".format(
+                                profile.weightKg * 2.20462,
+                                (profile.heightCm / 2.54).roundToInt(),
+                                profile.calorieGoal
+                            )
+                        } else {
+                            "Current: %.1f kg • %d cm • Calorie Target: %,d kcal".format(
+                                profile.weightKg,
+                                profile.heightCm.roundToInt(),
+                                profile.calorieGoal
+                            )
+                        },
                         style = ZCalTypeScale.BodySmall,
                         color = colors.textSecondary
                     )
@@ -653,21 +725,21 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         OutlinedTextField(
                             value = editWeight,
                             onValueChange = { editWeight = it },
-                            label = { Text(strings.weightLabel) },
+                            label = { Text(if (isImperial) "${strings.weightLabel} (lbs)" else "${strings.weightLabel} (kg)") },
                             modifier = Modifier.weight(1f),
                             shape = ZCalShapes.Input
                         )
                         OutlinedTextField(
                             value = editHeight,
                             onValueChange = { editHeight = it },
-                            label = { Text(strings.heightLabel) },
+                            label = { Text(if (isImperial) "${strings.heightLabel} (in)" else "${strings.heightLabel} (cm)") },
                             modifier = Modifier.weight(1f),
                             shape = ZCalShapes.Input
                         )
                         OutlinedTextField(
                             value = editTargetWeight,
                             onValueChange = { editTargetWeight = it },
-                            label = { Text(strings.targetWeightLabel) },
+                            label = { Text(if (isImperial) "${strings.targetWeightLabel} (lbs)" else "${strings.targetWeightLabel} (kg)") },
                             modifier = Modifier.weight(1f),
                             shape = ZCalShapes.Input
                         )
@@ -675,16 +747,27 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
                     Button(
                         onClick = {
-                            val w = editWeight.toDoubleOrNull() ?: profile.weightKg
-                            val h = editHeight.toDoubleOrNull() ?: profile.heightCm
-                            val tw = editTargetWeight.toDoubleOrNull() ?: profile.targetWeightKg
-                            viewModel.updateBodyMetrics(w, h, tw)
+                            val parsedW = editWeight.toDoubleOrNull() ?: displayWeight
+                            val parsedH = editHeight.toDoubleOrNull() ?: displayHeight
+                            val parsedTw = editTargetWeight.toDoubleOrNull() ?: displayTargetWeight
+
+                            val finalWeightKg = if (isImperial) parsedW / 2.20462 else parsedW
+                            val finalHeightCm = if (isImperial) parsedH * 2.54 else parsedH
+                            val finalTargetWeightKg = if (isImperial) parsedTw / 2.20462 else parsedTw
+
+                            viewModel.updateBodyMetrics(finalWeightKg, finalHeightCm, finalTargetWeightKg)
                         },
                         shape = ZCalShapes.Pill,
                         colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text(strings.updateTargetsBtn, color = colors.onAccent, fontWeight = FontWeight.Bold)
+                        Text(
+                            strings.updateTargetsBtn,
+                            color = colors.onAccent,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

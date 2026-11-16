@@ -102,7 +102,7 @@ fun ZCalPrimaryButton(
         Row(
             modifier = Modifier
                 .height(52.dp)
-                .padding(horizontal = 18.dp),
+                .padding(horizontal = if (text.length > 18) 12.dp else 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -125,7 +125,7 @@ fun ZCalPrimaryButton(
                 Text(
                     text = text,
                     style = ZCalTypeScale.Title.copy(
-                        fontSize = 15.sp,
+                        fontSize = if (text.length > 22) 12.5.sp else if (text.length > 15) 13.5.sp else 15.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
                     maxLines = 1,
@@ -176,7 +176,7 @@ fun ZCalSecondaryButton(
         Row(
             modifier = Modifier
                 .height(52.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = if (text.length > 18) 12.dp else 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -199,7 +199,7 @@ fun ZCalSecondaryButton(
                 Text(
                     text = text,
                     style = ZCalTypeScale.Title.copy(
-                        fontSize = 15.sp,
+                        fontSize = if (text.length > 22) 12.5.sp else if (text.length > 15) 13.5.sp else 15.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
                     maxLines = 1,

@@ -155,6 +155,38 @@ class OnboardingViewModel @Inject constructor(
         _computedGoals.value = goals
     }
 
+    fun optimizePlanWithAi() {
+        val current = _profileDraft.value
+        val (proteinPerKg, fatShare) = when (current.goalType) {
+            GoalType.LOSE -> Pair(2.2, 0.22)
+            GoalType.GAIN -> Pair(2.0, 0.25)
+            GoalType.MAINTAIN -> Pair(1.9, 0.26)
+        }
+        val optimized = computeGoalsUseCase(
+            sex = current.sex,
+            birthYear = current.birthYear,
+            birthMonth = current.birthMonth,
+            birthDay = current.birthDay,
+            heightCm = current.heightCm,
+            weightKg = current.weightKg,
+            activityLevel = current.activityLevel,
+            goalType = current.goalType,
+            weeklyChangeKg = current.weeklyChangeKg,
+            proteinPerKg = proteinPerKg,
+            fatCalorieShare = fatShare
+        )
+        _profileDraft.value = current.copy(
+            calorieGoal = optimized.dailyCalories,
+            kilojouleGoal = optimized.dailyKilojoules,
+            proteinGoalG = optimized.proteinG,
+            carbsGoalG = optimized.carbsG,
+            fatGoalG = optimized.fatG,
+            claGoalMg = optimized.claMg,
+            fiberGoalG = optimized.fiberG
+        )
+        _computedGoals.value = optimized
+    }
+
     fun verifyAndSaveKey(
         provider: AiProviderType,
         apiKey: String,
@@ -453,42 +485,84 @@ fun OnboardingScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
+                            val isImperial = draft.units == UnitSystem.IMPERIAL
+
                             // Height Slider
-                            MetricSliderCard(
-                                label = strings.height,
-                                valueText = "${draft.heightCm.roundToInt()} cm",
-                                value = draft.heightCm.toFloat(),
-                                range = 130f..220f,
-                                stepSize = 1f,
-                                snapToFive = true,
-                                onValueChange = { h -> viewModel.updateDraft { it.copy(heightCm = h.toDouble()) } }
-                            )
+                            if (isImperial) {
+                                val hInches = (draft.heightCm / 2.54).toFloat().coerceIn(51f, 87f)
+                                val totalInches = hInches.roundToInt()
+                                MetricSliderCard(
+                                    label = "${strings.height} (ft/in)",
+                                    valueText = "${totalInches / 12}' ${totalInches % 12}\" ($totalInches in)",
+                                    value = hInches,
+                                    range = 51f..87f,
+                                    stepSize = 1f,
+                                    snapToFive = false,
+                                    onValueChange = { h -> viewModel.updateDraft { it.copy(heightCm = h * 2.54) } }
+                                )
+                            } else {
+                                MetricSliderCard(
+                                    label = strings.height,
+                                    valueText = "${draft.heightCm.roundToInt()} cm",
+                                    value = draft.heightCm.toFloat().coerceIn(130f, 220f),
+                                    range = 130f..220f,
+                                    stepSize = 1f,
+                                    snapToFive = true,
+                                    onValueChange = { h -> viewModel.updateDraft { it.copy(heightCm = h.toDouble()) } }
+                                )
+                            }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
                             // Current Weight Slider
-                            MetricSliderCard(
-                                label = strings.currentWeight,
-                                valueText = "${String.format("%.1f", draft.weightKg)} kg",
-                                value = draft.weightKg.toFloat(),
-                                range = 40f..180f,
-                                stepSize = 0.5f,
-                                snapToFive = true,
-                                onValueChange = { w -> viewModel.updateDraft { it.copy(weightKg = w.toDouble()) } }
-                            )
+                            if (isImperial) {
+                                val wLbs = (draft.weightKg * 2.20462).toFloat().coerceIn(88f, 396f)
+                                MetricSliderCard(
+                                    label = "${strings.currentWeight} (lbs)",
+                                    valueText = "${String.format(java.util.Locale.US, "%.1f", wLbs)} lbs",
+                                    value = wLbs,
+                                    range = 88f..396f,
+                                    stepSize = 1f,
+                                    snapToFive = true,
+                                    onValueChange = { w -> viewModel.updateDraft { it.copy(weightKg = w / 2.20462) } }
+                                )
+                            } else {
+                                MetricSliderCard(
+                                    label = strings.currentWeight,
+                                    valueText = "${String.format(java.util.Locale.US, "%.1f", draft.weightKg)} kg",
+                                    value = draft.weightKg.toFloat().coerceIn(40f, 180f),
+                                    range = 40f..180f,
+                                    stepSize = 0.5f,
+                                    snapToFive = true,
+                                    onValueChange = { w -> viewModel.updateDraft { it.copy(weightKg = w.toDouble()) } }
+                                )
+                            }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
                             // Target Weight Slider
-                            MetricSliderCard(
-                                label = strings.targetWeight,
-                                valueText = "${String.format("%.1f", draft.targetWeightKg)} kg",
-                                value = draft.targetWeightKg.toFloat(),
-                                range = 40f..180f,
-                                stepSize = 0.5f,
-                                snapToFive = true,
-                                onValueChange = { tw -> viewModel.updateDraft { it.copy(targetWeightKg = tw.toDouble()) } }
-                            )
+                            if (isImperial) {
+                                val twLbs = (draft.targetWeightKg * 2.20462).toFloat().coerceIn(88f, 396f)
+                                MetricSliderCard(
+                                    label = "${strings.targetWeight} (lbs)",
+                                    valueText = "${String.format(java.util.Locale.US, "%.1f", twLbs)} lbs",
+                                    value = twLbs,
+                                    range = 88f..396f,
+                                    stepSize = 1f,
+                                    snapToFive = true,
+                                    onValueChange = { tw -> viewModel.updateDraft { it.copy(targetWeightKg = tw / 2.20462) } }
+                                )
+                            } else {
+                                MetricSliderCard(
+                                    label = strings.targetWeight,
+                                    valueText = "${String.format(java.util.Locale.US, "%.1f", draft.targetWeightKg)} kg",
+                                    value = draft.targetWeightKg.toFloat().coerceIn(40f, 180f),
+                                    range = 40f..180f,
+                                    stepSize = 0.5f,
+                                    snapToFive = true,
+                                    onValueChange = { tw -> viewModel.updateDraft { it.copy(targetWeightKg = tw.toDouble()) } }
+                                )
+                            }
                         }
 
                         1 -> {
@@ -526,16 +600,36 @@ fun OnboardingScreen(
 
                             if (draft.goalType != GoalType.MAINTAIN) {
                                 Spacer(modifier = Modifier.height(10.dp))
-                                val absPace = kotlin.math.abs(draft.weeklyChangeKg).toFloat().coerceIn(0.1f, 1.2f)
-                                MetricSliderCard(
-                                    label = strings.weeklyPace,
-                                    valueText = "${String.format("%.2f", absPace)} kg / week",
-                                    value = absPace,
-                                    range = 0.1f..1.2f,
-                                    stepSize = 0.05f,
-                                    snapToFive = false,
-                                    onValueChange = { p -> viewModel.updateDraft { it.copy(weeklyChangeKg = p.toDouble()) } }
-                                )
+                                val isImperial = draft.units == UnitSystem.IMPERIAL
+                                if (isImperial) {
+                                    val absPaceLbs = (kotlin.math.abs(draft.weeklyChangeKg) * 2.20462).toFloat().coerceIn(0.22f, 2.65f)
+                                    MetricSliderCard(
+                                        label = "${strings.weeklyPace} (lbs/week)",
+                                        valueText = "${String.format(java.util.Locale.US, "%.2f", absPaceLbs)} lbs / week",
+                                        value = absPaceLbs,
+                                        range = 0.22f..2.65f,
+                                        stepSize = 0.1f,
+                                        snapToFive = false,
+                                        onValueChange = { pLbs ->
+                                            val sign = if (draft.goalType == GoalType.LOSE) -1.0 else 1.0
+                                            viewModel.updateDraft { it.copy(weeklyChangeKg = sign * (pLbs / 2.20462)) }
+                                        }
+                                    )
+                                } else {
+                                    val absPace = kotlin.math.abs(draft.weeklyChangeKg).toFloat().coerceIn(0.1f, 1.2f)
+                                    MetricSliderCard(
+                                        label = strings.weeklyPace,
+                                        valueText = "${String.format(java.util.Locale.US, "%.2f", absPace)} kg / week",
+                                        value = absPace,
+                                        range = 0.1f..1.2f,
+                                        stepSize = 0.05f,
+                                        snapToFive = false,
+                                        onValueChange = { p ->
+                                            val sign = if (draft.goalType == GoalType.LOSE) -1.0 else 1.0
+                                            viewModel.updateDraft { it.copy(weeklyChangeKg = sign * p.toDouble()) }
+                                        }
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(14.dp))
@@ -674,7 +768,7 @@ fun OnboardingScreen(
                             )
 
                             val quickModels = if (selectedProvider == AiProviderType.GEMINI) {
-                                listOf("auto", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.8-pro")
+                                listOf("auto", "gemini-4-hydrogen", "gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash")
                             } else {
                                 listOf("auto", "gpt-4o-mini", "gpt-4.1-mini")
                             }
@@ -894,7 +988,7 @@ fun OnboardingScreen(
                                         isOptimizingPlan = true
                                         optimizeSuccessMsg = null
                                         delay(700)
-                                        viewModel.updateDraft { it }
+                                        viewModel.optimizePlanWithAi()
                                         isOptimizingPlan = false
                                         optimizeSuccessMsg = "Targets calibrated with metabolic gold standard!"
                                     }

@@ -7,16 +7,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -38,9 +44,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import app.zcal.ui.localization.LocalZCalStrings
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.zcal.data.local.MealTypeDistributionRow
@@ -246,7 +254,9 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.canvas),
+            .background(colors.canvas)
+            .statusBarsPadding()
+            .displayCutoutPadding(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -426,41 +436,63 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Surface(
-                                    modifier = Modifier.weight(1f).height(36.dp),
+                                    modifier = Modifier.weight(1f).height(38.dp),
                                     shape = ZCalShapes.Pill,
                                     color = if (!showTopByProtein) colors.accent else colors.surfaceVariant,
                                     border = BorderStroke(1.dp, if (!showTopByProtein) colors.accent else colors.outline),
                                     onClick = { showTopByProtein = false }
                                 ) {
-                                    androidx.compose.foundation.layout.Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize()
+                                    Row(
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        Icon(
+                                            Icons.Outlined.LocalFireDepartment,
+                                            contentDescription = null,
+                                            tint = if (!showTopByProtein) colors.onAccent else colors.textSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             strings.byCaloriesLabel,
                                             style = ZCalTypeScale.Label.copy(
+                                                fontSize = 12.sp,
                                                 fontWeight = if (!showTopByProtein) FontWeight.Bold else FontWeight.Medium
                                             ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                             color = if (!showTopByProtein) colors.onAccent else colors.textPrimary
                                         )
                                     }
                                 }
                                 Surface(
-                                    modifier = Modifier.weight(1f).height(36.dp),
+                                    modifier = Modifier.weight(1f).height(38.dp),
                                     shape = ZCalShapes.Pill,
                                     color = if (showTopByProtein) colors.accent else colors.surfaceVariant,
                                     border = BorderStroke(1.dp, if (showTopByProtein) colors.accent else colors.outline),
                                     onClick = { showTopByProtein = true }
                                 ) {
-                                    androidx.compose.foundation.layout.Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize()
+                                    Row(
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        Icon(
+                                            Icons.Filled.FitnessCenter,
+                                            contentDescription = null,
+                                            tint = if (showTopByProtein) colors.onAccent else colors.textSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             strings.byProteinLabel,
                                             style = ZCalTypeScale.Label.copy(
+                                                fontSize = 12.sp,
                                                 fontWeight = if (showTopByProtein) FontWeight.Bold else FontWeight.Medium
                                             ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                             color = if (showTopByProtein) colors.onAccent else colors.textPrimary
                                         )
                                     }
@@ -559,7 +591,13 @@ fun ProgressScreen(viewModel: ProgressViewModel) {
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Icon(Icons.Outlined.IosShare, contentDescription = null)
-                Text(strings.exportCsvBtn, modifier = Modifier.padding(start = 8.dp))
+                Text(
+                    strings.exportCsvBtn,
+                    modifier = Modifier.padding(start = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = ZCalTypeScale.Label.copy(fontSize = 13.sp)
+                )
             }
         }
     }

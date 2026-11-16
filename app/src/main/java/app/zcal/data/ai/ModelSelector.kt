@@ -37,7 +37,7 @@ object ModelSelector {
         val preview: Boolean
     )
 
-    private val GEMINI = Regex("""(?:^|/)gemini-(\d+(?:\.\d+)?)-(flash-lite|flash|pro)(.*)$""")
+    private val GEMINI = Regex("""(?:^|/)gemini-(\d+(?:\.\d+)?)-(flash-lite|flash|hydrogen|pro|carbon|argon)(.*)$""")
 
     private fun parseGemini(rawId: String): Parsed? {
         val id = rawId.removePrefix("models/")
@@ -45,8 +45,8 @@ object ModelSelector {
         if (REJECT.any { lower.contains(it) }) return null
         val m = GEMINI.find(lower) ?: return null
         val tier = when (m.groupValues[2]) {
-            "flash" -> Tier.FLASH
-            "pro" -> Tier.PRO
+            "hydrogen", "flash" -> Tier.FLASH
+            "carbon", "argon", "pro" -> Tier.PRO
             else -> Tier.LITE
         }
         return Parsed(
