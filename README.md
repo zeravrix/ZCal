@@ -5,7 +5,7 @@
   <br>
   <b>Open-source, private, camera-first AI nutrition tracker for Android.</b>
   <br>
-  <i>No subscriptions. No private backend. Bring your own AI key (BYOK). Version 1.2.0.</i>
+  <i>No subscriptions. No private backend. Bring your own AI key (BYOK). Version 1.3.0.</i>
 </p>
 
 ---
@@ -82,7 +82,7 @@ cd ZCal
 # Build debug APK
 ./gradlew assembleDebug
 
-# Build optimized release APK (version 1.2.0)
+# Build optimized release APK (version 1.3.0)
 ./gradlew assembleRelease
 ```
 
