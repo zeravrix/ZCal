@@ -172,7 +172,22 @@ data class Translations(
     val updateTargetsBtn: String = "Update & Recalculate Goals",
     val targetWeightLabel: String = "Target Weight",
     val heightLabel: String = "Height",
-    val weightLabel: String = "Weight"
+    val weightLabel: String = "Weight",
+    val settingsAiTitle: String = "AI Vision & Models",
+    val settingsAiSubtitle: String = "API key, model selection & verification",
+    val settingsBodyTitle: String = "Body & Nutrition Goals",
+    val settingsBodySubtitle: String = "Height, weight, pace, calories & macros",
+    val settingsAppearanceTitle: String = "Appearance & Themes",
+    val settingsAppearanceSubtitle: String = "Dark mode, calm palette & display toggles",
+    val settingsLanguageTitle: String = "Language",
+    val settingsLanguageSubtitle: String = "Select app interface language",
+    val settingsDataTitle: String = "Data & Privacy",
+    val settingsDataSubtitle: String = "Export JSON backup, storage & reset",
+    val backToSettings: String = "Back to Settings",
+    val activeConfigBadge: String = "Active Configuration",
+    val thinkingLevelLabel: String = "Reasoning Depth: Medium (Fast vision & JSON)",
+    val quickModelPresets: String = "Quick Model Presets",
+    val verifyAndSaveKey: String = "Verify Key & Save"
 )
 
 object ZCalStrings {
@@ -431,7 +446,22 @@ object ZCalStrings {
         updateTargetsBtn = "تحديث الأهداف وحسابها",
         targetWeightLabel = "الوزن المستهدف",
         heightLabel = "الطول",
-        weightLabel = "الوزن"
+        weightLabel = "الوزن",
+        settingsAiTitle = "الذكاء الاصطناعي والموديلات",
+        settingsAiSubtitle = "مفتاح API واختيار الموديل والتحقق السريع",
+        settingsBodyTitle = "القياسات والأهداف الغذائية",
+        settingsBodySubtitle = "الطول والوزن والسعرات والماكروز",
+        settingsAppearanceTitle = "المظهر والسمات",
+        settingsAppearanceSubtitle = "الوضع الداكن وألوان الشاشة",
+        settingsLanguageTitle = "اللغة",
+        settingsLanguageSubtitle = "اختر لغة واجهة التطبيق",
+        settingsDataTitle = "البيانات والخصوصية",
+        settingsDataSubtitle = "تصدير النسخ الاحتياطية وإعادة التعيين",
+        backToSettings = "العودة للإعدادات",
+        activeConfigBadge = "الإعدادات النشطة",
+        thinkingLevelLabel = "عمق التفكير: متوسط (سرعة ودقة فائقة)",
+        quickModelPresets = "موديلات جاهزة",
+        verifyAndSaveKey = "التحقق والحفظ" 
     )
 
     private val fr = Translations(
@@ -601,7 +631,22 @@ object ZCalStrings {
         updateTargetsBtn = "Recalculer les objectifs",
         targetWeightLabel = "Poids cible",
         heightLabel = "Taille",
-        weightLabel = "Poids"
+        weightLabel = "Poids",
+        settingsAiTitle = "Vision IA & Modèles",
+        settingsAiSubtitle = "Clé API, sélection de modèle & vérification",
+        settingsBodyTitle = "Mesures & Objectifs",
+        settingsBodySubtitle = "Taille, poids, calories & macronutriments",
+        settingsAppearanceTitle = "Apparence & Thèmes",
+        settingsAppearanceSubtitle = "Mode sombre, palette apaisée & affichage",
+        settingsLanguageTitle = "Langue",
+        settingsLanguageSubtitle = "Choisir la langue de l'application",
+        settingsDataTitle = "Données & Confidentialité",
+        settingsDataSubtitle = "Sauvegarde JSON, stockage & réinitialisation",
+        backToSettings = "Retour aux paramètres",
+        activeConfigBadge = "Configuration active",
+        thinkingLevelLabel = "Raisonnement: Moyen (rapide et précis)",
+        quickModelPresets = "Modèles rapides",
+        verifyAndSaveKey = "Vérifier et enregistrer" 
     )
 
     private val es = Translations(
@@ -771,7 +816,22 @@ object ZCalStrings {
         updateTargetsBtn = "Recalcular objetivos",
         targetWeightLabel = "Peso objetivo",
         heightLabel = "Altura",
-        weightLabel = "Peso"
+        weightLabel = "Peso",
+        settingsAiTitle = "Visión IA y Modelos",
+        settingsAiSubtitle = "Clave API, selección de modelo y verificación",
+        settingsBodyTitle = "Métricas y Objetivos",
+        settingsBodySubtitle = "Altura, peso, calorías y macronutrientes",
+        settingsAppearanceTitle = "Apariencia y Temas",
+        settingsAppearanceSubtitle = "Modo oscuro, paleta tranquila y pantalla",
+        settingsLanguageTitle = "Idioma",
+        settingsLanguageSubtitle = "Seleccionar idioma de la aplicación",
+        settingsDataTitle = "Datos y Privacidad",
+        settingsDataSubtitle = "Copia JSON, almacenamiento y reinicio",
+        backToSettings = "Volver a Ajustes",
+        activeConfigBadge = "Configuración activa",
+        thinkingLevelLabel = "Razonamiento: Medio (rápido y preciso)",
+        quickModelPresets = "Modelos rápidos",
+        verifyAndSaveKey = "Verificar y guardar" 
     )
 
     private val de = Translations(
@@ -941,7 +1001,22 @@ object ZCalStrings {
         updateTargetsBtn = "Ziele neu berechnen",
         targetWeightLabel = "Zielgewicht",
         heightLabel = "Größe",
-        weightLabel = "Gewicht"
+        weightLabel = "Gewicht",
+        settingsAiTitle = "KI-Vision & Modelle",
+        settingsAiSubtitle = "API-Schlüssel, Modellauswahl & Verifizierung",
+        settingsBodyTitle = "Körperdaten & Ziele",
+        settingsBodySubtitle = "Größe, Gewicht, Kalorien & Makros",
+        settingsAppearanceTitle = "Erscheinungsbild & Themes",
+        settingsAppearanceSubtitle = "Dunkelmodus, ruhige Farbpalette & Anzeige",
+        settingsLanguageTitle = "Sprache",
+        settingsLanguageSubtitle = "App-Sprache auswählen",
+        settingsDataTitle = "Daten & Datenschutz",
+        settingsDataSubtitle = "JSON-Backup, Speicher & Zurücksetzen",
+        backToSettings = "Zurück zu Einstellungen",
+        activeConfigBadge = "Aktive Konfiguration",
+        thinkingLevelLabel = "Denktiefe: Mittel (schnell & präzise)",
+        quickModelPresets = "Schnellauswahl Modelle",
+        verifyAndSaveKey = "Prüfen und speichern" 
     )
 
     private val ja = Translations(
@@ -1111,7 +1186,22 @@ object ZCalStrings {
         updateTargetsBtn = "目標を再計算",
         targetWeightLabel = "目標体重",
         heightLabel = "身長",
-        weightLabel = "体重"
+        weightLabel = "体重",
+        settingsAiTitle = "AIビジョン＆モデル",
+        settingsAiSubtitle = "APIキー、モデル選択、高速検証",
+        settingsBodyTitle = "身体データと栄養目標",
+        settingsBodySubtitle = "身長、体重、目標カロリー、PFCバランス",
+        settingsAppearanceTitle = "外観とテーマ",
+        settingsAppearanceSubtitle = "ダークモード、落ち着いた配色、表示設定",
+        settingsLanguageTitle = "言語",
+        settingsLanguageSubtitle = "アプリの言語を選択",
+        settingsDataTitle = "データとプライバシー",
+        settingsDataSubtitle = "JSONバックアップ、ストレージ、初期化",
+        backToSettings = "設定に戻る",
+        activeConfigBadge = "現在の設定",
+        thinkingLevelLabel = "推論レベル：中（高速＆高精度）",
+        quickModelPresets = "おすすめモデル",
+        verifyAndSaveKey = "検証して保存"
     )
 
     private val zh = Translations(
@@ -1281,7 +1371,22 @@ object ZCalStrings {
         updateTargetsBtn = "重新计算目标",
         targetWeightLabel = "目标体重",
         heightLabel = "身高",
-        weightLabel = "体重"
+        weightLabel = "体重",
+        settingsAiTitle = "AI 视觉与模型",
+        settingsAiSubtitle = "API 密钥、模型选择与快速验证",
+        settingsBodyTitle = "身体指标与营养目标",
+        settingsBodySubtitle = "身高、体重、目标卡路里与三大营养素",
+        settingsAppearanceTitle = "外观与主题",
+        settingsAppearanceSubtitle = "深色模式、护眼配色与显示选项",
+        settingsLanguageTitle = "语言",
+        settingsLanguageSubtitle = "选择应用界面语言",
+        settingsDataTitle = "数据与隐私",
+        settingsDataSubtitle = "导出 JSON 备份、存储与重置",
+        backToSettings = "返回设置",
+        activeConfigBadge = "当前配置",
+        thinkingLevelLabel = "思考深度：中（快速响应与精准解析）",
+        quickModelPresets = "预设快捷模型",
+        verifyAndSaveKey = "验证并保存"
     )
 
     private val ko = Translations(
@@ -1451,7 +1556,22 @@ object ZCalStrings {
         updateTargetsBtn = "목표 재계산",
         targetWeightLabel = "목표 체중",
         heightLabel = "키",
-        weightLabel = "체중"
+        weightLabel = "체중",
+        settingsAiTitle = "AI 비전 및 모델",
+        settingsAiSubtitle = "API 키, 모델 선택 및 빠른 검증",
+        settingsBodyTitle = "신체 측정 및 영양 목표",
+        settingsBodySubtitle = "키, 체중, 칼로리 및 매크로 영양소",
+        settingsAppearanceTitle = "화면 및 테마",
+        settingsAppearanceSubtitle = "다크 모드, 차분한 색상 및 디스플레이",
+        settingsLanguageTitle = "언어",
+        settingsLanguageSubtitle = "앱 인터페이스 언어 선택",
+        settingsDataTitle = "데이터 및 개인정보",
+        settingsDataSubtitle = "JSON 백업 내보내기, 저장소 및 초기화",
+        backToSettings = "설정으로 돌아가기",
+        activeConfigBadge = "현재 구성",
+        thinkingLevelLabel = "사고 깊이: 중간 (빠른 비전 및 고정밀)",
+        quickModelPresets = "빠른 모델 선택",
+        verifyAndSaveKey = "검증 및 저장" 
     )
 
     fun forLanguage(lang: AppLanguage): Translations {

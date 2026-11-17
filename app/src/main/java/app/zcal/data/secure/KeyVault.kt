@@ -170,7 +170,12 @@ class KeyVault @Inject constructor(
         val provider = runCatching {
             AiProviderType.valueOf(prefs[KEY_PROVIDER_TYPE] ?: AiProviderType.GEMINI.name)
         }.getOrDefault(AiProviderType.GEMINI)
-        prefs[KEY_MODEL_ID]?.takeIf { it.isNotBlank() } ?: provider.defaultModel
+        val raw = prefs[KEY_MODEL_ID]
+        if (raw.isNullOrBlank() || raw.equals("auto", ignoreCase = true)) {
+            provider.defaultModel
+        } else {
+            raw
+        }
     }
 
     val customBaseUrlFlow: Flow<String> = context.secureKeyDataStore.data.map { prefs ->

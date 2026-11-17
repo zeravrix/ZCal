@@ -64,7 +64,7 @@ enum class AiProviderType(
 ) {
     GEMINI(
         displayName = "Google Gemini (AI Studio)",
-        defaultModel = "auto",
+        defaultModel = "gemini-3.8-flash",
         fallbackModel = "gemini-3.8-flash",
         defaultBaseUrl = "https://generativelanguage.googleapis.com"
     ),

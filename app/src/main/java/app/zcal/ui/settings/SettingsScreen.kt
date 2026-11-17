@@ -1,28 +1,14 @@
 package app.zcal.ui.settings
 
+import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material3.Icon
-import app.zcal.domain.model.AppLanguage
-import app.zcal.ui.localization.LocalZCalStrings
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,19 +16,37 @@ import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import app.zcal.domain.model.UnitSystem
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,9 +55,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.zcal.data.ai.FoodAnalyzer
@@ -64,8 +75,12 @@ import app.zcal.data.repo.MealRepository
 import app.zcal.data.repo.ProfileRepository
 import app.zcal.data.secure.KeyVault
 import app.zcal.domain.model.AiProviderType
+import app.zcal.domain.model.AppLanguage
 import app.zcal.domain.model.ThemePreference
+import app.zcal.domain.model.UnitSystem
 import app.zcal.domain.model.UserProfile
+import app.zcal.domain.usecase.ComputeGoalsUseCase
+import app.zcal.ui.localization.LocalZCalStrings
 import app.zcal.ui.theme.LocalZCalColors
 import app.zcal.ui.theme.ZCalShapes
 import app.zcal.ui.theme.ZCalTypeScale
@@ -78,8 +93,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
+
+enum class SettingsSection {
+    AI_MODELS,
+    BODY_GOALS,
+    APPEARANCE,
+    LANGUAGE,
+    DATA_PRIVACY
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -87,7 +111,7 @@ class SettingsViewModel @Inject constructor(
     private val mealRepository: MealRepository,
     private val keyVault: KeyVault,
     private val foodAnalyzer: FoodAnalyzer,
-    private val computeGoalsUseCase: app.zcal.domain.usecase.ComputeGoalsUseCase
+    private val computeGoalsUseCase: ComputeGoalsUseCase
 ) : ViewModel() {
 
     fun updateBodyMetrics(
@@ -193,7 +217,6 @@ class SettingsViewModel @Inject constructor(
     private val _loadingModels = MutableStateFlow(false)
     val loadingModels: StateFlow<Boolean> = _loadingModels.asStateFlow()
 
-    /** Fetches the models this key can use so the user can pick one (blank key = use the stored one). */
     fun loadModelChoices(provider: AiProviderType, typedKey: String, baseUrl: String) {
         viewModelScope.launch {
             _loadingModels.value = true
@@ -210,11 +233,6 @@ class SettingsViewModel @Inject constructor(
 
     fun dismissModelChoices() { _modelChoices.value = null }
 
-    /**
-     * Saves provider, base URL and model, but only keeps them if they WORK. A typed key is verified and stored; with a
-     * blank key the stored key is used, so the model can be changed without pasting the key again. A failed check
-     * restores the previous settings so a typo can never break scanning.
-     */
     fun saveAndVerifyProviderKey(
         provider: AiProviderType,
         newKey: String,
@@ -235,7 +253,7 @@ class SettingsViewModel @Inject constructor(
                 return@launch
             }
             _verifyMessage.value = "Verifying..."
-            val modelToTest = modelId.trim().ifEmpty { ModelSelector.AUTO }
+            val modelToTest = modelId.trim().ifEmpty { provider.defaultModel }
             when (val res = foodAnalyzer.verifyApiKey(keyToTest, modelToTest, baseUrl)) {
                 is KeyVerificationResult.Valid -> {
                     if (newKey.isNotBlank()) keyVault.saveApiKey(provider, newKey)
@@ -285,7 +303,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { profileRepository.setHideNumbers(enabled) }
     }
 
-    fun exportJsonBackup(context: android.content.Context) {
+    fun exportJsonBackup(context: Context) {
         viewModelScope.launch {
             val meals = mealRepository.getAllMealsForExport()
             val file = ExportHelper.exportMealsToJsonFile(context, meals)
@@ -301,13 +319,10 @@ class SettingsViewModel @Inject constructor(
 }
 
 /**
- * Section 4 Page 6 & Section 7/10/12 Settings Screen:
- * - Masked API Key display (`••••••••ABCD`) + Remove Key + Verify Key
- * - Editable AI Provider & Model ID (`gemini-2.5-flash`, `gemini-3.5-flash-lite`, OpenAI, Ollama)
- * - Personal Calibration Slider (`-25%` to `+25%`, Section 6 Accuracy Lever #6)
- * - Theme Selector (`System`, `Light`, `Dark`, `AMOLED Pure Black`) & Wallpaper Colors toggle
- * - Calm Calendar Palette & Hide Numbers/Streaks toggles (Section 10 & 11)
- * - JSON / CSV Backup & Open Food Facts ODbL Attribution
+ * Redesigned Settings Architecture:
+ * - Clean Settings Hub with categorized section cards.
+ * - Dedicated sub-pages for AI Vision, Body Goals, Appearance, Language, and Data Privacy.
+ * - BackHandler & animated back navigation.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -332,9 +347,39 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val hideNumbers by viewModel.hideNumbers.collectAsState()
     val verifyMsg by viewModel.verifyMessage.collectAsState()
 
+    var currentSection by remember { mutableStateOf<SettingsSection?>(null) }
+    var showResetDialog by remember { mutableStateOf(false) }
+
     var keyInput by remember { mutableStateOf("") }
     var modelEdit by remember(modelId) { mutableStateOf(modelId) }
     var baseUrlEdit by remember(baseUrl) { mutableStateOf(baseUrl) }
+
+    BackHandler(enabled = currentSection != null) {
+        currentSection = null
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(strings.resetLogBtn, fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to reset all logged meals and cached records? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.resetAllData()
+                        showResetDialog = false
+                    }
+                ) {
+                    Text(strings.resetLogBtn, color = colors.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(strings.cancel)
+                }
+            }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -345,552 +390,871 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            Text(strings.settings, style = ZCalTypeScale.Headline, color = colors.textPrimary)
-        }
-
-        // Language Selector Card (8 Languages)
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = ZCalShapes.Card,
-                color = colors.surfaceElevated,
-                shadowElevation = 2.dp,
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Language,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(strings.language, style = ZCalTypeScale.Title, color = colors.textPrimary)
-                    }
-
-                    AppLanguage.entries.chunked(2).forEach { rowPair ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            rowPair.forEach { lang ->
-                                val isSel = appLang == lang
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(42.dp)
-                                        .clip(ZCalShapes.Pill)
-                                        .clickable { viewModel.setLanguage(lang) },
-                                    shape = ZCalShapes.Pill,
-                                    color = if (isSel) colors.accent else colors.surfaceVariant,
-                                    border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
-                                ) {
-                                    androidx.compose.foundation.layout.Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)
-                                    ) {
-                                        Text(
-                                            text = "${lang.nativeTitle} (${lang.title})",
-                                            style = ZCalTypeScale.Label.copy(
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                                                fontSize = 12.sp
-                                            ),
-                                            color = if (isSel) colors.onAccent else colors.textPrimary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 1. AI Provider & Android Keystore Key Vault
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = ZCalShapes.Card,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(strings.byokTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+        if (currentSection == null) {
+            // MAIN SETTINGS HUB
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(strings.settings, style = ZCalTypeScale.Headline, color = colors.textPrimary)
                     Text(
-                        text = "${strings.storedKey}: ${maskedKey ?: strings.noKeyConfigured}",
+                        "Preferences, intelligence & metabolic targets",
                         style = ZCalTypeScale.BodySmall,
                         color = colors.textSecondary
                     )
+                }
+            }
 
+            // Quick Status Glance Bar
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = colors.surfaceElevated,
+                    border = BorderStroke(1.dp, colors.outline)
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AiProviderType.entries.forEach { p ->
-                            val isSel = provider == p
-                            Surface(
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .height(42.dp)
-                                    .clip(ZCalShapes.Pill)
-                                    .clickable {
-                                        modelEdit = p.defaultModel
-                                        baseUrlEdit = p.defaultBaseUrl
-                                        viewModel.saveAndVerifyProviderKey(p, "", p.defaultModel, p.defaultBaseUrl)
-                                    },
-                                shape = ZCalShapes.Pill,
-                                color = if (isSel) colors.accent else colors.surfaceVariant,
-                                border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
-                            ) {
-                                androidx.compose.foundation.layout.Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.fillMaxSize()
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (maskedKey != null) Color(0xFF10B981) else Color(0xFFF59E0B))
+                            )
+                            Text(
+                                text = if (maskedKey != null) modelId else "No Key",
+                                style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.SemiBold),
+                                color = colors.textPrimary
+                            )
+                        }
+
+                        Text(
+                            text = "${profile.calorieGoal} kcal • ${if (profile.units == UnitSystem.METRIC) "Metric" else "Imperial"}",
+                            style = ZCalTypeScale.Label,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
+            }
+
+            // Section 1: AI Vision & Models
+            item {
+                SettingsHubCard(
+                    title = strings.settingsAiTitle,
+                    subtitle = "${provider.displayName} • ${if (maskedKey != null) maskedKey else "Key required"}",
+                    icon = Icons.Filled.Key,
+                    iconTint = Color(0xFF8A7CFF),
+                    iconBg = Color(0xFF8A7CFF).copy(alpha = 0.14f),
+                    onClick = { currentSection = SettingsSection.AI_MODELS }
+                )
+            }
+
+            // Section 2: Body Metrics & Metabolic Targets
+            item {
+                val isImperial = profile.units == UnitSystem.IMPERIAL
+                val weightStr = if (isImperial) "%.1f lbs".format(Locale.US, profile.weightKg * 2.20462) else "%.1f kg".format(Locale.US, profile.weightKg)
+                SettingsHubCard(
+                    title = strings.settingsBodyTitle,
+                    subtitle = "$weightStr • ${profile.calorieGoal} kcal target",
+                    icon = Icons.Filled.FitnessCenter,
+                    iconTint = Color(0xFF10B981),
+                    iconBg = Color(0xFF10B981).copy(alpha = 0.14f),
+                    onClick = { currentSection = SettingsSection.BODY_GOALS }
+                )
+            }
+
+            // Section 3: Appearance & Themes
+            item {
+                val themeLabel = when (themePref) {
+                    ThemePreference.SYSTEM -> strings.system
+                    ThemePreference.LIGHT -> strings.light
+                    ThemePreference.DARK -> strings.dark
+                    ThemePreference.AMOLED -> strings.amoled
+                }
+                SettingsHubCard(
+                    title = strings.settingsAppearanceTitle,
+                    subtitle = "$themeLabel theme • Mindful display",
+                    icon = Icons.Outlined.AutoFixHigh,
+                    iconTint = Color(0xFFF59E0B),
+                    iconBg = Color(0xFFF59E0B).copy(alpha = 0.14f),
+                    onClick = { currentSection = SettingsSection.APPEARANCE }
+                )
+            }
+
+            // Section 4: Language
+            item {
+                SettingsHubCard(
+                    title = strings.settingsLanguageTitle,
+                    subtitle = "${appLang.nativeTitle} (${appLang.title})",
+                    icon = Icons.Filled.Language,
+                    iconTint = Color(0xFF38BDF8),
+                    iconBg = Color(0xFF38BDF8).copy(alpha = 0.14f),
+                    onClick = { currentSection = SettingsSection.LANGUAGE }
+                )
+            }
+
+            // Section 5: Data & Privacy
+            item {
+                SettingsHubCard(
+                    title = strings.settingsDataTitle,
+                    subtitle = "JSON backup, local cache & attribution",
+                    icon = Icons.Filled.Shield,
+                    iconTint = Color(0xFF94A3B8),
+                    iconBg = Color(0xFF94A3B8).copy(alpha = 0.14f),
+                    onClick = { currentSection = SettingsSection.DATA_PRIVACY }
+                )
+            }
+        } else {
+            // SUB-PAGE HEADER
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconButton(
+                        onClick = { currentSection = null },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = strings.backToSettings,
+                            tint = colors.accent
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = when (currentSection) {
+                                SettingsSection.AI_MODELS -> strings.settingsAiTitle
+                                SettingsSection.BODY_GOALS -> strings.settingsBodyTitle
+                                SettingsSection.APPEARANCE -> strings.settingsAppearanceTitle
+                                SettingsSection.LANGUAGE -> strings.settingsLanguageTitle
+                                SettingsSection.DATA_PRIVACY -> strings.settingsDataTitle
+                                else -> strings.settings
+                            },
+                            style = ZCalTypeScale.Headline.copy(fontSize = 20.sp),
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = strings.settings,
+                            style = ZCalTypeScale.Label,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
+            }
+
+            // SUB-PAGE CONTENTS
+            when (currentSection) {
+                SettingsSection.AI_MODELS -> {
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = ZCalShapes.Card,
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.outline)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(strings.byokTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+
+                                // Active Provider Pills
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    AiProviderType.entries.forEach { p ->
+                                        val isSel = provider == p
+                                        Surface(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(42.dp)
+                                                .clip(ZCalShapes.Pill)
+                                                .clickable {
+                                                    modelEdit = p.defaultModel
+                                                    baseUrlEdit = p.defaultBaseUrl
+                                                    viewModel.saveAndVerifyProviderKey(p, "", p.defaultModel, p.defaultBaseUrl)
+                                                },
+                                            shape = ZCalShapes.Pill,
+                                            color = if (isSel) colors.accent else colors.surfaceVariant,
+                                            border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
+                                        ) {
+                                            Box(
+                                                contentAlignment = Alignment.Center,
+                                                modifier = Modifier.fillMaxSize()
+                                            ) {
+                                                Text(
+                                                    p.displayName,
+                                                    style = ZCalTypeScale.Label.copy(
+                                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
+                                                    ),
+                                                    color = if (isSel) colors.onAccent else colors.textPrimary
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Key Status Badge
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceElevated,
+                                    border = BorderStroke(1.dp, colors.outline),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Key,
+                                            contentDescription = null,
+                                            tint = if (maskedKey != null) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Column {
+                                            Text(
+                                                text = "${strings.storedKey}: ${maskedKey ?: strings.noKeyConfigured}",
+                                                style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                                color = colors.textPrimary
+                                            )
+                                            Text(
+                                                text = "Encrypted in hardware Keystore (AES-256-GCM)",
+                                                style = ZCalTypeScale.Label,
+                                                color = colors.textSecondary
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Quick Model Presets
+                                Text(strings.quickModelPresets, style = ZCalTypeScale.BodySmall, color = colors.textSecondary)
+                                val quickModels = if (provider == AiProviderType.GEMINI) {
+                                    listOf("gemini-3.8-flash", "gemini-4-hydrogen", "gemini-2.5-flash", "auto")
+                                } else {
+                                    listOf("gpt-4o-mini", "gpt-4.1-mini", "auto")
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    quickModels.forEach { qm ->
+                                        val isChosen = modelEdit.equals(qm, ignoreCase = true)
+                                        Surface(
+                                            shape = ZCalShapes.Pill,
+                                            color = if (isChosen) colors.accent.copy(alpha = 0.16f) else colors.surface,
+                                            border = BorderStroke(1.dp, if (isChosen) colors.accent else colors.outline),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { modelEdit = qm }
+                                        ) {
+                                            Text(
+                                                text = if (qm == "auto") "auto" else qm.substringAfter("gemini-").substringAfter("gpt-"),
+                                                style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.SemiBold),
+                                                color = if (isChosen) colors.accent else colors.textSecondary,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Thinking Level Speed Tag
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = colors.accent.copy(alpha = 0.08f),
+                                    border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.25f)),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
-                                        p.displayName,
-                                        style = ZCalTypeScale.Label.copy(
-                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
-                                        ),
-                                        color = if (isSel) colors.onAccent else colors.textPrimary
+                                        text = strings.thinkingLevelLabel,
+                                        style = ZCalTypeScale.Label,
+                                        color = colors.accent,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                     )
                                 }
-                            }
-                        }
-                    }
 
-                    OutlinedTextField(
-                        value = modelEdit,
-                        onValueChange = { modelEdit = it },
-                        label = { Text(strings.modelLabel) },
-                        supportingText = {
-                            Text(strings.modelSupportingText)
-                        },
-                        shape = ZCalShapes.Input,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                                OutlinedTextField(
+                                    value = modelEdit,
+                                    onValueChange = { modelEdit = it },
+                                    label = { Text(strings.modelLabel) },
+                                    supportingText = { Text(strings.modelSupportingText) },
+                                    shape = ZCalShapes.Input,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
 
-                    val quickModels = if (provider == AiProviderType.GEMINI) {
-                        listOf("auto", "gemini-4-hydrogen", "gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash")
-                    } else {
-                        listOf("auto", "gpt-4o-mini", "gpt-4.1-mini")
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        quickModels.forEach { qm ->
-                            val isChosen = modelEdit.equals(qm, ignoreCase = true)
-                            Surface(
-                                shape = ZCalShapes.Pill,
-                                color = if (isChosen) colors.accent.copy(alpha = 0.16f) else colors.surface,
-                                border = BorderStroke(1.dp, if (isChosen) colors.accent else colors.outline),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { modelEdit = qm }
-                            ) {
-                                Text(
-                                    text = if (qm == "auto") "auto" else qm.substringAfter("gemini-").substringAfter("gpt-"),
-                                    style = ZCalTypeScale.Label.copy(fontWeight = FontWeight.SemiBold),
-                                    color = if (isChosen) colors.accent else colors.textSecondary,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp)
+                                OutlinedButton(
+                                    onClick = { viewModel.loadModelChoices(provider, keyInput, baseUrlEdit) },
+                                    enabled = !loadingModels,
+                                    shape = ZCalShapes.Pill,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (loadingModels) strings.loadingModels else strings.chooseModelsBtn)
+                                }
+
+                                OutlinedTextField(
+                                    value = baseUrlEdit,
+                                    onValueChange = { baseUrlEdit = it },
+                                    label = { Text(strings.baseUrlLabel) },
+                                    supportingText = {
+                                        Text(
+                                            if (provider == AiProviderType.GEMINI) strings.baseUrlGeminiHint
+                                            else strings.baseUrlOpenAiHint
+                                        )
+                                    },
+                                    shape = ZCalShapes.Input,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                OutlinedTextField(
+                                    value = keyInput,
+                                    onValueChange = { keyInput = it },
+                                    label = { Text(strings.apiKeyLabel) },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    shape = ZCalShapes.Input,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            viewModel.saveAndVerifyProviderKey(provider, keyInput, modelEdit, baseUrlEdit) { ok ->
+                                                if (ok) keyInput = ""
+                                            }
+                                        },
+                                        shape = ZCalShapes.Pill,
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
+                                        modifier = Modifier.weight(1f).height(48.dp)
+                                    ) {
+                                        Text(strings.verifyAndSaveBtn, color = colors.onAccent, fontWeight = FontWeight.Bold)
+                                    }
+                                    if (maskedKey != null) {
+                                        OutlinedButton(
+                                            onClick = { viewModel.removeCurrentKey() },
+                                            shape = ZCalShapes.Pill,
+                                            modifier = Modifier.weight(1f).height(48.dp)
+                                        ) {
+                                            Text(strings.removeKeyBtn, color = colors.error)
+                                        }
+                                    }
+                                }
+
+                                verifyMsg?.let { msg ->
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = colors.surfaceElevated,
+                                        border = BorderStroke(1.dp, colors.outline),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            msg,
+                                            style = ZCalTypeScale.Label,
+                                            color = colors.accent,
+                                            modifier = Modifier.padding(10.dp)
+                                        )
+                                    }
+                                }
+
+                                SettingsToggleRow(
+                                    title = strings.allowPreviewModels,
+                                    subtitle = strings.allowPreviewDesc,
+                                    checked = allowPreview,
+                                    onCheckedChange = { viewModel.setAllowPreviewModels(it) }
                                 )
                             }
                         }
                     }
+                }
 
-                    SettingsToggleRow(
-                        title = strings.allowPreviewModels,
-                        subtitle = strings.allowPreviewDesc,
-                        checked = allowPreview,
-                        onCheckedChange = { viewModel.setAllowPreviewModels(it) }
-                    )
+                SettingsSection.BODY_GOALS -> {
+                    item {
+                        val isImperial = profile.units == UnitSystem.IMPERIAL
+                        val displayWeight = if (isImperial) profile.weightKg * 2.20462 else profile.weightKg
+                        val displayHeight = if (isImperial) profile.heightCm / 2.54 else profile.heightCm
+                        val displayTargetWeight = if (isImperial) profile.targetWeightKg * 2.20462 else profile.targetWeightKg
 
-                    OutlinedButton(
-                        onClick = { viewModel.loadModelChoices(provider, keyInput, baseUrlEdit) },
-                        enabled = !loadingModels,
-                        shape = ZCalShapes.Pill
-                    ) {
-                        Text(if (loadingModels) strings.loadingModels else strings.chooseModelsBtn)
-                    }
+                        var editWeight by remember(profile.weightKg, isImperial) {
+                            mutableStateOf(String.format(Locale.US, "%.1f", displayWeight))
+                        }
+                        var editHeight by remember(profile.heightCm, isImperial) {
+                            mutableStateOf(displayHeight.roundToInt().toString())
+                        }
+                        var editTargetWeight by remember(profile.targetWeightKg, isImperial) {
+                            mutableStateOf(String.format(Locale.US, "%.1f", displayTargetWeight))
+                        }
 
-                    OutlinedTextField(
-                        value = baseUrlEdit,
-                        onValueChange = { baseUrlEdit = it },
-                        label = { Text(strings.baseUrlLabel) },
-                        supportingText = {
-                            Text(
-                                if (provider == AiProviderType.GEMINI) strings.baseUrlGeminiHint
-                                else strings.baseUrlOpenAiHint
-                            )
-                        },
-                        shape = ZCalShapes.Input,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = keyInput,
-                        onValueChange = { keyInput = it },
-                        label = { Text(strings.apiKeyLabel) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        shape = ZCalShapes.Input,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                viewModel.saveAndVerifyProviderKey(provider, keyInput, modelEdit, baseUrlEdit) { ok ->
-                                    if (ok) keyInput = "" // keep what was typed if the check failed, so nothing is retyped
-                                }
-                            },
-                            shape = ZCalShapes.Pill,
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                            modifier = Modifier.weight(1f).height(46.dp)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = ZCalShapes.Card,
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.outline)
                         ) {
-                            Text(strings.verifyAndSaveBtn, color = colors.onAccent)
-                        }
-                        if (maskedKey != null) {
-                            OutlinedButton(
-                                onClick = { viewModel.removeCurrentKey() },
-                                shape = ZCalShapes.Pill,
-                                modifier = Modifier.weight(1f).height(46.dp)
-                            ) {
-                                Text(strings.removeKeyBtn)
-                            }
-                        }
-                    }
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(strings.bodyMetricsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
 
-                    verifyMsg?.let { msg ->
-                        Text(msg, style = ZCalTypeScale.Label, color = colors.accent)
-                    }
-
-                    modelChoices?.let { choices ->
-                        AlertDialog(
-                            onDismissRequest = { viewModel.dismissModelChoices() },
-                            title = { Text(strings.chooseModelDialogTitle) },
-                            text = {
-                                Column(
-                                    modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                // Unit System Switcher
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    TextButton(onClick = { modelEdit = ModelSelector.AUTO; viewModel.dismissModelChoices() }) {
-                                        Text(strings.autoRecommended)
-                                    }
-                                    if (choices.recommended.isNotEmpty()) {
-                                        Text(strings.suitedForFood, style = ZCalTypeScale.Label, color = colors.textSecondary)
-                                        choices.recommended.forEach { id ->
-                                            TextButton(onClick = { modelEdit = id; viewModel.dismissModelChoices() }) { Text(id) }
-                                        }
-                                    }
-                                    if (choices.others.isNotEmpty()) {
-                                        Text(strings.otherModels, style = ZCalTypeScale.Label, color = colors.textSecondary)
-                                        choices.others.forEach { id ->
-                                            TextButton(onClick = { modelEdit = id; viewModel.dismissModelChoices() }) { Text(id) }
+                                    UnitSystem.entries.forEach { u ->
+                                        val selected = profile.units == u
+                                        Surface(
+                                            shape = ZCalShapes.Pill,
+                                            color = if (selected) colors.accent else colors.surfaceElevated,
+                                            border = BorderStroke(1.dp, if (selected) colors.accent else colors.outline),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(40.dp)
+                                                .clickable { viewModel.setUnitSystem(u) }
+                                        ) {
+                                            Box(
+                                                contentAlignment = Alignment.Center,
+                                                modifier = Modifier.fillMaxSize()
+                                            ) {
+                                                Text(
+                                                    text = if (u == UnitSystem.METRIC) strings.metric else strings.imperial,
+                                                    style = ZCalTypeScale.Label.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium),
+                                                    color = if (selected) colors.onAccent else colors.textPrimary
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            },
-                            confirmButton = {
-                                TextButton(onClick = { viewModel.dismissModelChoices() }) { Text(strings.closeBtn) }
-                            }
-                        )
-                    }
-                }
-            }
-        }
 
-        // 2. Personal Calibration Lever (Section 6 Accuracy Lever #6)
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = ZCalShapes.Card,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        "${strings.personalCalibrationTitle}: ${if (profile.personalCalibrationPct >= 0) "+" else ""}${profile.personalCalibrationPct}%",
-                        style = ZCalTypeScale.Title,
-                        color = colors.textPrimary
-                    )
-                    Text(
-                        strings.personalCalibrationDesc,
-                        style = ZCalTypeScale.Label,
-                        color = colors.textSecondary
-                    )
-                    Slider(
-                        value = profile.personalCalibrationPct.toFloat(),
-                        onValueChange = { viewModel.updateCalibrationPct(it.roundToInt()) },
-                        valueRange = -25f..25f
-                    )
-                }
-            }
-        }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = editWeight,
+                                        onValueChange = { editWeight = it },
+                                        label = { Text(if (isImperial) "${strings.weightLabel} (lbs)" else "${strings.weightLabel} (kg)") },
+                                        modifier = Modifier.weight(1f),
+                                        shape = ZCalShapes.Input
+                                    )
+                                    OutlinedTextField(
+                                        value = editHeight,
+                                        onValueChange = { editHeight = it },
+                                        label = { Text(if (isImperial) "${strings.heightLabel} (in)" else "${strings.heightLabel} (cm)") },
+                                        modifier = Modifier.weight(1f),
+                                        shape = ZCalShapes.Input
+                                    )
+                                    OutlinedTextField(
+                                        value = editTargetWeight,
+                                        onValueChange = { editTargetWeight = it },
+                                        label = { Text(if (isImperial) "${strings.targetWeightLabel} (lbs)" else "${strings.targetWeightLabel} (kg)") },
+                                        modifier = Modifier.weight(1f),
+                                        shape = ZCalShapes.Input
+                                    )
+                                }
 
-        // Body Measurements & Long-Term Metabolic Target Recalculation
-        item {
-            val isImperial = profile.units == UnitSystem.IMPERIAL
-            val displayWeight = if (isImperial) profile.weightKg * 2.20462 else profile.weightKg
-            val displayHeight = if (isImperial) profile.heightCm / 2.54 else profile.heightCm
-            val displayTargetWeight = if (isImperial) profile.targetWeightKg * 2.20462 else profile.targetWeightKg
+                                // Targets summary card
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceElevated,
+                                    border = BorderStroke(1.dp, colors.outline),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            "Target: %,d kcal • %d g Protein • %d g Carbs • %d g Fat".format(
+                                                profile.calorieGoal,
+                                                profile.proteinGoalG,
+                                                profile.carbsGoalG,
+                                                profile.fatGoalG
+                                            ),
+                                            style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = colors.textPrimary
+                                        )
+                                        Text(
+                                            "CLA: %,d mg • Fiber: %d g".format(profile.claGoalMg, profile.fiberGoalG),
+                                            style = ZCalTypeScale.Label,
+                                            color = colors.textSecondary
+                                        )
+                                    }
+                                }
 
-            var editWeight by remember(profile.weightKg, isImperial) {
-                mutableStateOf(String.format(java.util.Locale.US, "%.1f", displayWeight))
-            }
-            var editHeight by remember(profile.heightCm, isImperial) {
-                mutableStateOf(displayHeight.roundToInt().toString())
-            }
-            var editTargetWeight by remember(profile.targetWeightKg, isImperial) {
-                mutableStateOf(String.format(java.util.Locale.US, "%.1f", displayTargetWeight))
-            }
+                                Button(
+                                    onClick = {
+                                        val parsedW = editWeight.toDoubleOrNull() ?: displayWeight
+                                        val parsedH = editHeight.toDoubleOrNull() ?: displayHeight
+                                        val parsedTw = editTargetWeight.toDoubleOrNull() ?: displayTargetWeight
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = ZCalShapes.Card,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(strings.bodyMetricsTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
-                    }
+                                        val finalWeightKg = if (isImperial) parsedW / 2.20462 else parsedW
+                                        val finalHeightCm = if (isImperial) parsedH * 2.54 else parsedH
+                                        val finalTargetWeightKg = if (isImperial) parsedTw / 2.20462 else parsedTw
 
-                    // Unit System Switcher
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        UnitSystem.entries.forEach { u ->
-                            val selected = profile.units == u
-                            Surface(
-                                shape = ZCalShapes.Pill,
-                                color = if (selected) colors.accent else colors.surfaceElevated,
-                                border = BorderStroke(1.dp, if (selected) colors.accent else colors.outline),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(36.dp)
-                                    .clickable { viewModel.setUnitSystem(u) }
-                            ) {
-                                androidx.compose.foundation.layout.Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.fillMaxSize()
+                                        viewModel.updateBodyMetrics(finalWeightKg, finalHeightCm, finalTargetWeightKg)
+                                    },
+                                    shape = ZCalShapes.Pill,
+                                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
                                     Text(
-                                        text = if (u == UnitSystem.METRIC) strings.metric else strings.imperial,
-                                        style = ZCalTypeScale.Label.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium),
-                                        color = if (selected) colors.onAccent else colors.textPrimary
+                                        strings.updateTargetsBtn,
+                                        color = colors.onAccent,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
                         }
                     }
 
-                    Text(
-                        text = if (isImperial) {
-                            "Current: %.1f lbs • %d in • Calorie Target: %,d kcal".format(
-                                profile.weightKg * 2.20462,
-                                (profile.heightCm / 2.54).roundToInt(),
-                                profile.calorieGoal
-                            )
-                        } else {
-                            "Current: %.1f kg • %d cm • Calorie Target: %,d kcal".format(
-                                profile.weightKg,
-                                profile.heightCm.roundToInt(),
-                                profile.calorieGoal
-                            )
-                        },
-                        style = ZCalTypeScale.BodySmall,
-                        color = colors.textSecondary
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = editWeight,
-                            onValueChange = { editWeight = it },
-                            label = { Text(if (isImperial) "${strings.weightLabel} (lbs)" else "${strings.weightLabel} (kg)") },
-                            modifier = Modifier.weight(1f),
-                            shape = ZCalShapes.Input
-                        )
-                        OutlinedTextField(
-                            value = editHeight,
-                            onValueChange = { editHeight = it },
-                            label = { Text(if (isImperial) "${strings.heightLabel} (in)" else "${strings.heightLabel} (cm)") },
-                            modifier = Modifier.weight(1f),
-                            shape = ZCalShapes.Input
-                        )
-                        OutlinedTextField(
-                            value = editTargetWeight,
-                            onValueChange = { editTargetWeight = it },
-                            label = { Text(if (isImperial) "${strings.targetWeightLabel} (lbs)" else "${strings.targetWeightLabel} (kg)") },
-                            modifier = Modifier.weight(1f),
-                            shape = ZCalShapes.Input
-                        )
-                    }
-
-                    Button(
-                        onClick = {
-                            val parsedW = editWeight.toDoubleOrNull() ?: displayWeight
-                            val parsedH = editHeight.toDoubleOrNull() ?: displayHeight
-                            val parsedTw = editTargetWeight.toDoubleOrNull() ?: displayTargetWeight
-
-                            val finalWeightKg = if (isImperial) parsedW / 2.20462 else parsedW
-                            val finalHeightCm = if (isImperial) parsedH * 2.54 else parsedH
-                            val finalTargetWeightKg = if (isImperial) parsedTw / 2.20462 else parsedTw
-
-                            viewModel.updateBodyMetrics(finalWeightKg, finalHeightCm, finalTargetWeightKg)
-                        },
-                        shape = ZCalShapes.Pill,
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        Text(
-                            strings.updateTargetsBtn,
-                            color = colors.onAccent,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    // Personal Calibration
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = ZCalShapes.Card,
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.outline)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    "${strings.personalCalibrationTitle}: ${if (profile.personalCalibrationPct >= 0) "+" else ""}${profile.personalCalibrationPct}%",
+                                    style = ZCalTypeScale.Title,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    strings.personalCalibrationDesc,
+                                    style = ZCalTypeScale.Label,
+                                    color = colors.textSecondary
+                                )
+                                Slider(
+                                    value = profile.personalCalibrationPct.toFloat(),
+                                    onValueChange = { viewModel.updateCalibrationPct(it.roundToInt()) },
+                                    valueRange = -25f..25f
+                                )
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        // 3. Appearance (Light, Dark, AMOLED Pure Black, Material You, Calm Palette)
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = ZCalShapes.Card,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(strings.themeAndDisplayTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
-
-                    ThemePreference.entries.chunked(2).forEach { rowPair ->
-                        Row(
+                SettingsSection.APPEARANCE -> {
+                    item {
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            shape = ZCalShapes.Card,
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.outline)
                         ) {
-                            rowPair.forEach { t ->
-                                val themeLabel = when(t) {
-                                    ThemePreference.SYSTEM -> strings.system
-                                    ThemePreference.LIGHT -> strings.light
-                                    ThemePreference.DARK -> strings.dark
-                                    ThemePreference.AMOLED -> strings.amoled
-                                }
-                                val isSel = themePref == t
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(40.dp)
-                                        .clip(ZCalShapes.Pill)
-                                        .clickable { viewModel.setTheme(t) },
-                                    shape = ZCalShapes.Pill,
-                                    color = if (isSel) colors.accent else colors.surfaceVariant,
-                                    border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
-                                ) {
-                                    androidx.compose.foundation.layout.Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize()
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(strings.themeAndDisplayTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+
+                                ThemePreference.entries.chunked(2).forEach { rowPair ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text(
-                                            themeLabel,
-                                            style = ZCalTypeScale.Label.copy(
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
-                                            ),
-                                            color = if (isSel) colors.onAccent else colors.textPrimary
-                                        )
+                                        rowPair.forEach { t ->
+                                            val themeLabel = when (t) {
+                                                ThemePreference.SYSTEM -> strings.system
+                                                ThemePreference.LIGHT -> strings.light
+                                                ThemePreference.DARK -> strings.dark
+                                                ThemePreference.AMOLED -> strings.amoled
+                                            }
+                                            val isSel = themePref == t
+                                            Surface(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(42.dp)
+                                                    .clip(ZCalShapes.Pill)
+                                                    .clickable { viewModel.setTheme(t) },
+                                                shape = ZCalShapes.Pill,
+                                                color = if (isSel) colors.accent else colors.surfaceVariant,
+                                                border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
+                                            ) {
+                                                Box(
+                                                    contentAlignment = Alignment.Center,
+                                                    modifier = Modifier.fillMaxSize()
+                                                ) {
+                                                    Text(
+                                                        themeLabel,
+                                                        style = ZCalTypeScale.Label.copy(
+                                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
+                                                        ),
+                                                        color = if (isSel) colors.onAccent else colors.textPrimary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                SettingsToggleRow(
+                                    title = strings.calmCalendarPalette,
+                                    subtitle = strings.calmCalendarDesc,
+                                    checked = calmPalette,
+                                    onCheckedChange = { viewModel.setCalmPalette(it) }
+                                )
+
+                                SettingsToggleRow(
+                                    title = strings.forgiveOneDayTitle,
+                                    subtitle = strings.forgiveOneDayDesc,
+                                    checked = forgiveOneDay,
+                                    onCheckedChange = { viewModel.setForgiveOneDay(it) }
+                                )
+
+                                SettingsToggleRow(
+                                    title = strings.hideNumbersTitle,
+                                    subtitle = strings.hideNumbersDesc,
+                                    checked = hideNumbers,
+                                    onCheckedChange = { viewModel.setHideNumbers(it) }
+                                )
+
+                                SettingsToggleRow(
+                                    title = strings.dynamicColorTitle,
+                                    subtitle = strings.dynamicColorDesc,
+                                    checked = dynamicColor,
+                                    onCheckedChange = { viewModel.setDynamicColor(it) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                SettingsSection.LANGUAGE -> {
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = ZCalShapes.Card,
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.outline)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(strings.language, style = ZCalTypeScale.Title, color = colors.textPrimary)
+
+                                AppLanguage.entries.forEach { lang ->
+                                    val isSel = appLang == lang
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable { viewModel.setLanguage(lang) },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSel) colors.accent.copy(alpha = 0.12f) else colors.surfaceElevated,
+                                        border = BorderStroke(1.dp, if (isSel) colors.accent else colors.outline)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = lang.nativeTitle,
+                                                    style = ZCalTypeScale.Body.copy(fontWeight = FontWeight.Bold),
+                                                    color = if (isSel) colors.accent else colors.textPrimary
+                                                )
+                                                Text(
+                                                    text = lang.title,
+                                                    style = ZCalTypeScale.Label,
+                                                    color = colors.textSecondary
+                                                )
+                                            }
+
+                                            if (isSel) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = colors.accent,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-
-                    SettingsToggleRow(
-                        title = strings.calmCalendarPalette,
-                        subtitle = strings.calmCalendarDesc,
-                        checked = calmPalette,
-                        onCheckedChange = { viewModel.setCalmPalette(it) }
-                    )
-
-                    SettingsToggleRow(
-                        title = strings.forgiveOneDayTitle,
-                        subtitle = strings.forgiveOneDayDesc,
-                        checked = forgiveOneDay,
-                        onCheckedChange = { viewModel.setForgiveOneDay(it) }
-                    )
-
-                    SettingsToggleRow(
-                        title = strings.hideNumbersTitle,
-                        subtitle = strings.hideNumbersDesc,
-                        checked = hideNumbers,
-                        onCheckedChange = { viewModel.setHideNumbers(it) }
-                    )
-
-                    SettingsToggleRow(
-                        title = strings.dynamicColorTitle,
-                        subtitle = strings.dynamicColorDesc,
-                        checked = dynamicColor,
-                        onCheckedChange = { viewModel.setDynamicColor(it) }
-                    )
                 }
-            }
-        }
 
-        // 4. Data Export, Reset & Open Food Facts Attribution
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = ZCalShapes.Card,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outline)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(strings.dataAndAttributionTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { viewModel.exportJsonBackup(context) },
-                            shape = ZCalShapes.Pill,
-                            modifier = Modifier.weight(1f).height(46.dp)
+                SettingsSection.DATA_PRIVACY -> {
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = ZCalShapes.Card,
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.outline)
                         ) {
-                            Text(strings.exportBackupBtn)
-                        }
-                        OutlinedButton(
-                            onClick = { viewModel.resetAllData() },
-                            shape = ZCalShapes.Pill,
-                            modifier = Modifier.weight(1f).height(46.dp)
-                        ) {
-                            Text(strings.resetLogBtn, color = colors.error)
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(strings.dataAndAttributionTitle, style = ZCalTypeScale.Title, color = colors.textPrimary)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.exportJsonBackup(context) },
+                                        shape = ZCalShapes.Pill,
+                                        modifier = Modifier.weight(1f).height(48.dp)
+                                    ) {
+                                        Text(strings.exportBackupBtn)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { showResetDialog = true },
+                                        shape = ZCalShapes.Pill,
+                                        modifier = Modifier.weight(1f).height(48.dp)
+                                    ) {
+                                        Text(strings.resetLogBtn, color = colors.error)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceElevated,
+                                    border = BorderStroke(1.dp, colors.outline),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            "Privacy Architecture",
+                                            style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.Bold),
+                                            color = colors.textPrimary
+                                        )
+                                        Text(
+                                            "ZCal is an offline-first app. Your personal logs, body metrics, and encryption keys never leave your device. All API calls go directly to your configured provider.",
+                                            style = ZCalTypeScale.Label,
+                                            color = colors.textSecondary
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = strings.attributionNote,
+                                    style = ZCalTypeScale.Label,
+                                    color = colors.textSecondary
+                                )
+
+                                Text(
+                                    text = "ZCal v1.4.0 • Native Jetpack Compose",
+                                    style = ZCalTypeScale.Label,
+                                    color = colors.accent
+                                )
+                            }
                         }
                     }
-                    Text(
-                        text = strings.attributionNote,
-                        style = ZCalTypeScale.Label,
-                        color = colors.textSecondary
-                    )
                 }
+                null -> {}
             }
+        }
+    }
+
+    // Model selection dialog
+    modelChoices?.let { choices ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissModelChoices() },
+            title = { Text(strings.chooseModelDialogTitle) },
+            text = {
+                Column(
+                    modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    TextButton(onClick = { modelEdit = ModelSelector.AUTO; viewModel.dismissModelChoices() }) {
+                        Text(strings.autoRecommended)
+                    }
+                    if (choices.recommended.isNotEmpty()) {
+                        Text(strings.suitedForFood, style = ZCalTypeScale.Label, color = colors.textSecondary)
+                        choices.recommended.forEach { id ->
+                            TextButton(onClick = { modelEdit = id; viewModel.dismissModelChoices() }) { Text(id) }
+                        }
+                    }
+                    if (choices.others.isNotEmpty()) {
+                        Text(strings.otherModels, style = ZCalTypeScale.Label, color = colors.textSecondary)
+                        choices.others.forEach { id ->
+                            TextButton(onClick = { modelEdit = id; viewModel.dismissModelChoices() }) { Text(id) }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissModelChoices() }) { Text(strings.closeBtn) }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SettingsHubCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    onClick: () -> Unit
+) {
+    val colors = LocalZCalColors.current
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.outline)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = ZCalTypeScale.Title.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = ZCalTypeScale.Label,
+                    color = colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = colors.textSecondary.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

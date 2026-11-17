@@ -768,9 +768,9 @@ fun OnboardingScreen(
                             )
 
                             val quickModels = if (selectedProvider == AiProviderType.GEMINI) {
-                                listOf("auto", "gemini-4-hydrogen", "gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash")
+                                listOf("gemini-3.8-flash", "gemini-4-hydrogen", "gemini-2.5-flash", "auto")
                             } else {
-                                listOf("auto", "gpt-4o-mini", "gpt-4.1-mini")
+                                listOf("gpt-4o-mini", "gpt-4.1-mini", "auto")
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(

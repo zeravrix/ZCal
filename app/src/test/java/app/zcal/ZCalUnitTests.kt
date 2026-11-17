@@ -135,7 +135,8 @@ class ZCalUnitTests {
     }
 
     @Test
-    fun `AiProviderType Gemini defaults to gemini-3_8-flash fallback`() {
+    fun `AiProviderType Gemini defaults to gemini-3_8-flash for default and fallback`() {
+        assertEquals("gemini-3.8-flash", AiProviderType.GEMINI.defaultModel)
         assertEquals("gemini-3.8-flash", AiProviderType.GEMINI.fallbackModel)
     }
 

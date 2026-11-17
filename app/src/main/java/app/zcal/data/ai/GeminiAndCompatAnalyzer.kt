@@ -146,10 +146,10 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         val defaultModelToTest = if (!modelId.trim().equals(ModelSelector.AUTO, ignoreCase = true) && modelId.isNotBlank()) {
             modelId.trim().removePrefix("models/")
         } else {
-            provider.fallbackModel
+            provider.defaultModel
         }
 
-        // Fast-path: probe the primary model directly in one quick HTTP call (< 600ms)
+        // Fast-path: probe the primary model directly in one quick HTTP call (< 300ms)
         val fastResult = probeModel(provider, trimmedKey, baseUrl, defaultModelToTest)
         if (fastResult is KeyVerificationResult.Valid) {
             keyVault.saveResolvedModel(provider, defaultModelToTest)
@@ -194,7 +194,7 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         return ModelChoices(recommended, ids.filter { it !in recommended }.distinct().sorted())
     }
 
-    /** Re-reads the cached pick weekly so a newly released model is adopted without an app update. */
+    /** Fast resolution: never stalls a meal scan with multi-page network calls. */
     private suspend fun resolveModel(
         provider: AiProviderType,
         apiKey: String,
@@ -203,15 +203,9 @@ class MultiProviderFoodAnalyzer @Inject constructor(
     ): String {
         if (!configured.equals(ModelSelector.AUTO, ignoreCase = true)) return configured
         val cached = keyVault.getResolvedModel(provider)
-        val weekMs = 7L * 24 * 60 * 60 * 1000
-        if (cached != null && System.currentTimeMillis() - cached.second < weekMs) return cached.first
-        val ids = fetchModelIds(provider, apiKey, baseUrl)
-        val best = ids?.let { ModelSelector.pickBest(provider, it, keyVault.allowPreviewModelsFlow.first()) }
-        if (best != null) {
-            keyVault.saveResolvedModel(provider, best)
-            return best
-        }
-        return cached?.first ?: provider.fallbackModel // listing failed: keep the last good pick, never block a scan
+        val monthMs = 30L * 24 * 60 * 60 * 1000
+        if (cached != null && System.currentTimeMillis() - cached.second < monthMs) return cached.first
+        return provider.defaultModel
     }
 
     /** Model IDs this key may call, or null when the list cannot be fetched. */
@@ -263,7 +257,7 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         return try {
             val response = if (provider == AiProviderType.GEMINI) {
                 val cleanBase = baseUrl.trimEnd('/').ifEmpty { AiProviderType.GEMINI.defaultBaseUrl }
-                val cleanModel = modelId.removePrefix("models/").trim().ifEmpty { AiProviderType.GEMINI.fallbackModel }
+                val cleanModel = modelId.removePrefix("models/").trim().ifEmpty { AiProviderType.GEMINI.defaultModel }
                 val url = "$cleanBase/v1beta/models/$cleanModel:generateContent"
                 val payload = buildJsonObject {
                     putJsonArray("contents") {
@@ -274,8 +268,17 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                         }
                     }
                     putJsonObject("generationConfig") {
-                        put("maxOutputTokens", 128)
+                        put("maxOutputTokens", 16)
                         put("temperature", 0.1)
+                        if (cleanModel.contains("3.") || cleanModel.contains("4-") || cleanModel.contains("hydrogen") || cleanModel.contains("flash")) {
+                            putJsonObject("thinkingConfig") {
+                                put("thinkingLevel", "minimal")
+                            }
+                        } else if (cleanModel.contains("2.5")) {
+                            putJsonObject("thinkingConfig") {
+                                put("thinkingBudget", 0)
+                            }
+                        }
                     }
                 }
                 httpClient.post(url) {
@@ -283,9 +286,9 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                     contentType(ContentType.Application.Json)
                     setBody(payload.toString())
                     timeout {
-                        requestTimeoutMillis = 10_000L
-                        connectTimeoutMillis = 5_000L
-                        socketTimeoutMillis = 10_000L
+                        requestTimeoutMillis = 6_000L
+                        connectTimeoutMillis = 3_000L
+                        socketTimeoutMillis = 6_000L
                     }
                 }
             } else {
@@ -493,6 +496,15 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                 put("temperature", 0.1)
                 put("responseMimeType", "application/json")
                 put("responseSchema", buildGeminiResponseSchema())
+                if (cleanModel.contains("3.") || cleanModel.contains("4-") || cleanModel.contains("hydrogen") || cleanModel.contains("flash")) {
+                    putJsonObject("thinkingConfig") {
+                        put("thinkingLevel", "medium")
+                    }
+                } else if (cleanModel.contains("2.5")) {
+                    putJsonObject("thinkingConfig") {
+                        put("thinkingBudget", 512)
+                    }
+                }
             }
         }
         setBody(requestJson.toString())
