@@ -53,8 +53,51 @@ class MultiProviderFoodAnalyzer @Inject constructor(
     private val keyVault: KeyVault
 ) : FoodAnalyzer {
 
+    companion object {
+        // Ordered high-availability Gemini vision fallbacks; quotas on Google AI Studio are per-model.
+        val GEMINI_FALLBACK_CHAIN = listOf(
+            "gemini-3.8-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite"
+        )
+
+        /**
+         * Returns the supported thinkingConfig key/value for [modelId], or null when unsupported.
+         * Never sends `minimal` (rejected by gemini-3.8-flash / gemini-4-*) and never sends
+         * `thinkingLevel` to Gemini 2.5 or 2.0 models (which reject it with HTTP 400).
+         */
+        fun thinkingConfigFor(modelId: String, forProbe: Boolean): Pair<String, Any>? {
+            val m = modelId.removePrefix("models/").trim().lowercase()
+            return when {
+                m.contains("2.5") -> "thinkingBudget" to (if (forProbe) 0 else 256)
+                m.contains("gemini-3") || m.contains("gemini-4") -> "thinkingLevel" to "low"
+                else -> null
+            }
+        }
+
+        fun isHardQuotaError(body: String): Boolean {
+            val lower = body.lowercase()
+            return "limit: 0" in lower || "perday" in lower || "per_day" in lower || "daily" in lower
+        }
+
+        fun fallbackCandidatesFor(
+            provider: AiProviderType,
+            primary: String,
+            discovered: List<String> = emptyList()
+        ): List<String> {
+            val base = if (provider == AiProviderType.GEMINI) GEMINI_FALLBACK_CHAIN else listOf(provider.fallbackModel)
+            return (base + discovered)
+                .map { it.removePrefix("models/").trim() }
+                .filter { it.isNotEmpty() && !it.equals(primary.removePrefix("models/").trim(), ignoreCase = true) }
+                .distinct()
+        }
+    }
+
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-    private val backoffDelaysMs = listOf(1000L, 2000L, 4000L)
+    private val backoffDelaysMs = listOf(1500L)
 
     override suspend fun analyzeMeal(
         imageFiles: List<File>,
@@ -80,9 +123,14 @@ class MultiProviderFoodAnalyzer @Inject constructor(
             correctionInstruction = correctionInstruction
         )
 
-        // Allow 1 automatic retry if the model emits malformed JSON (Section 6 error table)
+        val triedModels = LinkedHashSet<String>().apply { add(modelId.lowercase()) }
+        val fallbackQueue = ArrayDeque<String>()
+        var seededStaticFallbacks = false
+        var fetchedDynamicFallbacks = false
+        var switchedModel = false
         var jsonAttempt = 0
-        var reResolved = false
+        val maxModelAttempts = 4
+
         while (jsonAttempt < 2) {
             val rawCallResult = executeWithBackoff(
                 provider = provider,
@@ -97,6 +145,9 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                 is RawHttpOutcome.SuccessText -> {
                     when (val validated = ResponseValidator.parseAndValidate(rawCallResult.modelText)) {
                         is ResponseValidator.ValidationResult.Valid -> {
+                            if (switchedModel && isAuto) {
+                                keyVault.saveResolvedModel(provider, modelId)
+                            }
                             return FoodAnalysisResult.Success(
                                 analysis = validated.analysis,
                                 rawJson = validated.cleanedJson
@@ -114,16 +165,29 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                     }
                 }
                 is RawHttpOutcome.Failure -> {
-                    if (rawCallResult.modelGone && !reResolved) {
-                        // The model was retired or unavailable: clear cached resolved model and switch to fallbackModel
-                        reResolved = true
-                        keyVault.clearResolvedModel(provider)
-                        modelId = if (isAuto) {
-                            resolveModel(provider, apiKey, baseUrl, configuredModel)
-                        } else {
-                            provider.fallbackModel
+                    val canFallback = (rawCallResult.modelGone || rawCallResult.rateLimited) &&
+                        triedModels.size < maxModelAttempts
+                    if (canFallback) {
+                        if (rawCallResult.modelGone) keyVault.clearResolvedModel(provider)
+                        if (!seededStaticFallbacks) {
+                            seededStaticFallbacks = true
+                            fallbackCandidatesFor(provider, modelId).forEach { fallbackQueue.addLast(it) }
                         }
-                        continue
+                        var nextModel = pollNextUntried(fallbackQueue, triedModels)
+                        if (nextModel == null && !fetchedDynamicFallbacks) {
+                            fetchedDynamicFallbacks = true
+                            val ids = fetchModelIds(provider, apiKey, baseUrl)
+                            val allowPreview = keyVault.allowPreviewModelsFlow.first()
+                            val ranked = ids?.let { ModelSelector.rank(provider, it, allowPreview) }.orEmpty()
+                            ranked.forEach { fallbackQueue.addLast(it) }
+                            nextModel = pollNextUntried(fallbackQueue, triedModels)
+                        }
+                        if (nextModel != null) {
+                            triedModels.add(nextModel.lowercase())
+                            modelId = nextModel
+                            switchedModel = true
+                            continue
+                        }
                     }
                     return rawCallResult.error
                 }
@@ -131,6 +195,14 @@ class MultiProviderFoodAnalyzer @Inject constructor(
         }
 
         return FoodAnalysisResult.MalformedResponse("Could not parse meal analysis after retry.")
+    }
+
+    private fun pollNextUntried(queue: ArrayDeque<String>, tried: Set<String>): String? {
+        while (queue.isNotEmpty()) {
+            val candidate = queue.removeFirst()
+            if (candidate.lowercase() !in tried) return candidate
+        }
+        return null
     }
 
     override suspend fun verifyApiKey(
@@ -149,7 +221,6 @@ class MultiProviderFoodAnalyzer @Inject constructor(
             provider.defaultModel
         }
 
-        // Fast-path: probe the primary model directly in one quick HTTP call (< 300ms)
         val fastResult = probeModel(provider, trimmedKey, baseUrl, defaultModelToTest)
         if (fastResult is KeyVerificationResult.Valid) {
             keyVault.saveResolvedModel(provider, defaultModelToTest)
@@ -163,14 +234,13 @@ class MultiProviderFoodAnalyzer @Inject constructor(
             return fastResult
         }
 
-        // Fallback for custom or enterprise keys where default model might not be enabled
+        // Probe at most 3 fallback models so key verification never burns through free-tier RPM
         val ids = fetchModelIds(provider, trimmedKey, baseUrl)
         val allowPreview = keyVault.allowPreviewModelsFlow.first()
         val ranked = ids?.let { ModelSelector.rank(provider, it, allowPreview) }.orEmpty()
-        val candidates = (listOf(defaultModelToTest, provider.fallbackModel) + ranked).distinct()
+        val candidates = fallbackCandidatesFor(provider, defaultModelToTest, ranked).take(3)
         var last: KeyVerificationResult = fastResult
         for (candidate in candidates) {
-            if (candidate == defaultModelToTest) continue
             when (val res = probeModel(provider, trimmedKey, baseUrl, candidate)) {
                 is KeyVerificationResult.Valid -> {
                     keyVault.saveResolvedModel(provider, candidate)
@@ -268,15 +338,14 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                         }
                     }
                     putJsonObject("generationConfig") {
-                        put("maxOutputTokens", 16)
+                        put("maxOutputTokens", 32)
                         put("temperature", 0.1)
-                        if (cleanModel.contains("3.") || cleanModel.contains("4-") || cleanModel.contains("hydrogen") || cleanModel.contains("flash")) {
+                        thinkingConfigFor(cleanModel, forProbe = true)?.let { (k, v) ->
                             putJsonObject("thinkingConfig") {
-                                put("thinkingLevel", "minimal")
-                            }
-                        } else if (cleanModel.contains("2.5")) {
-                            putJsonObject("thinkingConfig") {
-                                put("thinkingBudget", 0)
+                                when (v) {
+                                    is Int -> put(k, v)
+                                    is String -> put(k, v)
+                                }
                             }
                         }
                     }
@@ -334,7 +403,11 @@ class MultiProviderFoodAnalyzer @Inject constructor(
 
     private sealed class RawHttpOutcome {
         data class SuccessText(val modelText: String) : RawHttpOutcome()
-        data class Failure(val error: FoodAnalysisResult, val modelGone: Boolean = false) : RawHttpOutcome()
+        data class Failure(
+            val error: FoodAnalysisResult,
+            val modelGone: Boolean = false,
+            val rateLimited: Boolean = false
+        ) : RawHttpOutcome()
     }
 
     private suspend fun executeWithBackoff(
@@ -392,12 +465,21 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                         )
                     }
                     status == 429 || status == 503 -> {
+                        if (status == 429 && isHardQuotaError(bodyText)) {
+                            return RawHttpOutcome.Failure(
+                                FoodAnalysisResult.RateLimited(detail = extractErrorMessage(bodyText).ifBlank { null }),
+                                rateLimited = true
+                            )
+                        }
                         if (attempt < backoffDelaysMs.size) {
                             delay(backoffDelaysMs[attempt])
                             attempt++
                             continue
                         } else {
-                            return RawHttpOutcome.Failure(FoodAnalysisResult.RateLimited())
+                            return RawHttpOutcome.Failure(
+                                FoodAnalysisResult.RateLimited(detail = extractErrorMessage(bodyText).ifBlank { null }),
+                                rateLimited = true
+                            )
                         }
                     }
                     else -> {
@@ -496,13 +578,12 @@ class MultiProviderFoodAnalyzer @Inject constructor(
                 put("temperature", 0.1)
                 put("responseMimeType", "application/json")
                 put("responseSchema", buildGeminiResponseSchema())
-                if (cleanModel.contains("3.") || cleanModel.contains("4-") || cleanModel.contains("hydrogen") || cleanModel.contains("flash")) {
+                thinkingConfigFor(cleanModel, forProbe = false)?.let { (k, v) ->
                     putJsonObject("thinkingConfig") {
-                        put("thinkingLevel", "medium")
-                    }
-                } else if (cleanModel.contains("2.5")) {
-                    putJsonObject("thinkingConfig") {
-                        put("thinkingBudget", 512)
+                        when (v) {
+                            is Int -> put(k, v)
+                            is String -> put(k, v)
+                        }
                     }
                 }
             }

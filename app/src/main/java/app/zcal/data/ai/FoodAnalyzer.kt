@@ -12,7 +12,7 @@ sealed class FoodAnalysisResult {
     data class Success(val analysis: MealAnalysis, val rawJson: String) : FoodAnalysisResult()
     data object NotFood : FoodAnalysisResult()
     data class InvalidKey(val message: String) : FoodAnalysisResult()
-    data class RateLimited(val retryAfterSeconds: Int = 60) : FoodAnalysisResult()
+    data class RateLimited(val retryAfterSeconds: Int = 60, val detail: String? = null) : FoodAnalysisResult()
     data class Offline(val savedPendingPhotoPath: String?) : FoodAnalysisResult()
     data class Timeout(val message: String) : FoodAnalysisResult()
     data class MalformedResponse(val message: String) : FoodAnalysisResult()

@@ -51,9 +51,9 @@ fun ConfidenceChip(
 ) {
     val colors = LocalZCalColors.current
     val (dotColor, label) = when (confidence) {
-        ConfidenceLevel.HIGH -> colors.accent to "High confidence"
-        ConfidenceLevel.MEDIUM -> colors.carbs to "Medium confidence"
-        ConfidenceLevel.LOW -> colors.protein to "Low confidence"
+        ConfidenceLevel.HIGH -> colors.accent to "High"
+        ConfidenceLevel.MEDIUM -> colors.carbs to "Medium"
+        ConfidenceLevel.LOW -> colors.protein to "Low"
     }
 
     Surface(
@@ -154,7 +154,7 @@ fun MealRowCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${meal.mealType.label} • $timeFormatted • P ${meal.proteinG.toInt()}g C ${meal.carbsG.toInt()}g F ${meal.fatG.toInt()}g",
+                    text = "$timeFormatted · P${meal.proteinG.toInt()} C${meal.carbsG.toInt()} F${meal.fatG.toInt()}g",
                     style = ZCalTypeScale.Label,
                     color = colors.textSecondary,
                     maxLines = 1

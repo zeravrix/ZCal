@@ -639,13 +639,13 @@ fun CameraCaptureScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Edit Manually", color = colors.onAccent)
+                                Text("Manual", color = colors.onAccent)
                             }
                         }
 
                         if (state.isKeyError) {
                             TextButton(onClick = onOpenSettingsForKey) {
-                                Text("Open Key Settings", color = colors.accent)
+                                Text("AI Settings", color = colors.accent)
                             }
                         }
                     }
@@ -780,8 +780,8 @@ private fun AnalyzingShimmerOverlay(
     val colors = LocalZCalColors.current
     val statusMessages = listOf(
         "Identifying foods...",
-        "Estimating portions...",
-        "Calculating Protein, Fat, CLA, kcal & kJ..."
+        "Measuring portions...",
+        "Calculating macros..."
     )
     var msgIndex by remember { mutableIntStateOf(0) }
 

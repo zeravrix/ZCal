@@ -63,13 +63,13 @@ enum class AiProviderType(
     val defaultBaseUrl: String
 ) {
     GEMINI(
-        displayName = "Google Gemini (AI Studio)",
+        displayName = "Google Gemini",
         defaultModel = "gemini-3.8-flash",
         fallbackModel = "gemini-3.8-flash",
         defaultBaseUrl = "https://generativelanguage.googleapis.com"
     ),
     OPENAI_COMPATIBLE(
-        displayName = "OpenAI / OpenRouter / Local Ollama",
+        displayName = "OpenAI / Local",
         defaultModel = "auto",
         fallbackModel = "gpt-4o-mini",
         defaultBaseUrl = "https://api.openai.com/v1"

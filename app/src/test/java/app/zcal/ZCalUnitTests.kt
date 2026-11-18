@@ -6,6 +6,7 @@ import app.zcal.domain.model.BiologicalSex
 import app.zcal.domain.model.EnergyConversion
 import app.zcal.domain.model.GoalType
 import app.zcal.data.ai.ModelSelector
+import app.zcal.data.ai.MultiProviderFoodAnalyzer
 import app.zcal.data.ai.PromptBuilder
 import app.zcal.domain.model.AiProviderType
 import app.zcal.domain.model.UnitSystem
@@ -175,5 +176,33 @@ class ZCalUnitTests {
         val logged = setOf("2026-11-14", "2026-11-13", "2026-11-11", "2026-11-10")
         assertEquals(2, DateHelpers.computeCurrentStreak(logged, today, forgiveOneMissedDayPerWeek = false))
         assertEquals(4, DateHelpers.computeCurrentStreak(logged, today, forgiveOneMissedDayPerWeek = true))
+    }
+
+    @Test
+    fun `thinkingConfigFor selects valid thinking params per Gemini generation`() {
+        assertEquals("thinkingLevel" to "low", MultiProviderFoodAnalyzer.thinkingConfigFor("gemini-3.8-flash", forProbe = false))
+        assertEquals("thinkingLevel" to "low", MultiProviderFoodAnalyzer.thinkingConfigFor("gemini-3.8-flash", forProbe = true))
+        assertEquals("thinkingLevel" to "low", MultiProviderFoodAnalyzer.thinkingConfigFor("gemini-4-hydrogen", forProbe = false))
+        assertEquals("thinkingBudget" to 256, MultiProviderFoodAnalyzer.thinkingConfigFor("gemini-2.5-flash", forProbe = false))
+        assertEquals("thinkingBudget" to 0, MultiProviderFoodAnalyzer.thinkingConfigFor("gemini-2.5-flash", forProbe = true))
+        assertEquals(null, MultiProviderFoodAnalyzer.thinkingConfigFor("gemini-2.0-flash", forProbe = false))
+    }
+
+    @Test
+    fun `fallbackCandidatesFor excludes primary and detects hard quota errors`() {
+        val fallbacks = MultiProviderFoodAnalyzer.fallbackCandidatesFor(AiProviderType.GEMINI, "gemini-3.8-flash")
+        assertTrue(fallbacks.isNotEmpty())
+        assertTrue("gemini-3.8-flash" !in fallbacks)
+        assertEquals("gemini-3.6-flash", fallbacks.first())
+        assertTrue(MultiProviderFoodAnalyzer.isHardQuotaError("Quota exceeded for metric, limit: 0"))
+        assertTrue(MultiProviderFoodAnalyzer.isHardQuotaError("GenerateRequestsPerDayPerProjectPerModel-FreeTier"))
+        assertTrue(!MultiProviderFoodAnalyzer.isHardQuotaError("Resource exhausted, try again shortly"))
+    }
+
+    @Test
+    fun `PromptBuilder stays concise and enforces object scale calibration`() {
+        assertTrue(PromptBuilder.SYSTEM_INSTRUCTION.length < 700)
+        assertTrue(PromptBuilder.SYSTEM_INSTRUCTION.contains("reference object", ignoreCase = true))
+        assertTrue(PromptBuilder.SYSTEM_INSTRUCTION.contains("volume", ignoreCase = true))
     }
 }

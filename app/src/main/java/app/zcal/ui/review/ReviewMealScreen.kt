@@ -290,27 +290,29 @@ class ReviewViewModel @Inject constructor(
             }
             is FoodAnalysisResult.NotFood -> {
                 _workflowState.value = CaptureWorkflowState.Error(
-                    title = "No Food Spotted",
-                    message = "No food spotted. Try another photo or describe it."
+                    title = "No Food Found",
+                    message = "Try another photo or enter manually."
                 )
             }
             is FoodAnalysisResult.InvalidKey -> {
                 _workflowState.value = CaptureWorkflowState.Error(
-                    title = "Key Rejected",
-                    message = "Google did not accept this key. Check it and try again.",
+                    title = "Invalid Key",
+                    message = "Check your API key in Settings.",
                     isKeyError = true
                 )
             }
             is FoodAnalysisResult.RateLimited -> {
                 _workflowState.value = CaptureWorkflowState.Error(
                     title = "Rate Limited",
-                    message = "Google is limiting requests on your key right now. Try again in a minute."
+                    message = result.detail?.let { "Quota limit hit: $it" }
+                        ?: "Rate limit hit. Wait a moment or switch model in Settings.",
+                    isKeyError = true
                 )
             }
             is FoodAnalysisResult.Offline -> {
                 _workflowState.value = CaptureWorkflowState.Error(
                     title = "Offline",
-                    message = "Saved. We will analyze it when you are back online.",
+                    message = "Saved. Will analyze once back online.",
                     isOfflineQueued = true
                 )
             }
@@ -602,7 +604,7 @@ fun ReviewMealScreen(
                                     color = colors.textPrimary
                                 )
                                 Text(
-                                    text = "CALORIES (CLA / KCAL)",
+                                    text = strings.calories.uppercase(),
                                     style = ZCalTypeScale.Label,
                                     color = colors.textSecondary
                                 )
@@ -614,7 +616,7 @@ fun ReviewMealScreen(
                                     color = colors.accent
                                 )
                                 Text(
-                                    text = "KILOJOULES (KJOL)",
+                                    text = strings.energyKj.uppercase(),
                                     style = ZCalTypeScale.Label,
                                     color = colors.textSecondary
                                 )
@@ -625,21 +627,21 @@ fun ReviewMealScreen(
 
                         // Animated Nutrient Bars for Protein, Fat, Carbs, and CLA (mg)
                         AnimatedNutrientBar(
-                            label = "${strings.protein} (P)",
+                            label = strings.protein,
                             valueText = "${meal.proteinG} g",
                             fraction = (meal.proteinG / 60.0).toFloat().coerceIn(0f, 1f),
                             barColor = colors.protein
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         AnimatedNutrientBar(
-                            label = "${strings.fat} (F)",
+                            label = strings.fat,
                             valueText = "${meal.fatG} g",
                             fraction = (meal.fatG / 40.0).toFloat().coerceIn(0f, 1f),
                             barColor = colors.fat
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         AnimatedNutrientBar(
-                            label = "${strings.carbs} (C)",
+                            label = strings.carbs,
                             valueText = "${meal.carbsG} g",
                             fraction = (meal.carbsG / 100.0).toFloat().coerceIn(0f, 1f),
                             barColor = colors.carbs
@@ -647,7 +649,7 @@ fun ReviewMealScreen(
                         Spacer(modifier = Modifier.height(10.dp))
                         AnimatedNutrientBar(
                             label = "${strings.cla} & ${strings.fiber}",
-                            valueText = "${meal.claMg.roundToInt()} mg CLA • ${meal.fiberG} g Fiber",
+                            valueText = "${meal.claMg.roundToInt()} mg · ${meal.fiberG} g",
                             fraction = (meal.claMg / 500.0).toFloat().coerceIn(0.1f, 1f),
                             barColor = colors.accent
                         )
@@ -737,12 +739,12 @@ fun ReviewMealScreen(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "${item.calories} kcal • ${item.kilojoules} kJ",
+                                text = "${item.calories} kcal",
                                 style = ZCalTypeScale.Title,
                                 color = colors.textPrimary
                             )
                             Text(
-                                text = "P ${item.proteinG}g • F ${item.fatG}g • C ${item.carbsG}g • CLA ${item.claMg.roundToInt()}mg",
+                                text = "P ${item.proteinG.roundToInt()}g · C ${item.carbsG.roundToInt()}g · F ${item.fatG.roundToInt()}g",
                                 style = ZCalTypeScale.Label,
                                 color = colors.textSecondary
                             )

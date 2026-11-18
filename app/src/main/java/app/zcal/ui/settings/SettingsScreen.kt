@@ -233,6 +233,13 @@ class SettingsViewModel @Inject constructor(
 
     fun dismissModelChoices() { _modelChoices.value = null }
 
+    fun switchProvider(provider: AiProviderType) {
+        viewModelScope.launch {
+            keyVault.updateProviderConfig(provider, provider.defaultModel, provider.defaultBaseUrl)
+            _verifyMessage.value = null
+        }
+    }
+
     fun saveAndVerifyProviderKey(
         provider: AiProviderType,
         newKey: String,
@@ -396,7 +403,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(strings.settings, style = ZCalTypeScale.Headline, color = colors.textPrimary)
                     Text(
-                        "Preferences, intelligence & metabolic targets",
+                        "Models, goals & preferences",
                         style = ZCalTypeScale.BodySmall,
                         color = colors.textSecondary
                     )
@@ -448,7 +455,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             item {
                 SettingsHubCard(
                     title = strings.settingsAiTitle,
-                    subtitle = "${provider.displayName} • ${if (maskedKey != null) maskedKey else "Key required"}",
+                    subtitle = "${provider.displayName} · ${maskedKey ?: "No key"}",
                     icon = Icons.Filled.Key,
                     iconTint = Color(0xFF8A7CFF),
                     iconBg = Color(0xFF8A7CFF).copy(alpha = 0.14f),
@@ -462,7 +469,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 val weightStr = if (isImperial) "%.1f lbs".format(Locale.US, profile.weightKg * 2.20462) else "%.1f kg".format(Locale.US, profile.weightKg)
                 SettingsHubCard(
                     title = strings.settingsBodyTitle,
-                    subtitle = "$weightStr • ${profile.calorieGoal} kcal target",
+                    subtitle = "$weightStr · ${profile.calorieGoal} kcal",
                     icon = Icons.Filled.FitnessCenter,
                     iconTint = Color(0xFF10B981),
                     iconBg = Color(0xFF10B981).copy(alpha = 0.14f),
@@ -480,7 +487,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 }
                 SettingsHubCard(
                     title = strings.settingsAppearanceTitle,
-                    subtitle = "$themeLabel theme • Mindful display",
+                    subtitle = "$themeLabel theme",
                     icon = Icons.Outlined.AutoFixHigh,
                     iconTint = Color(0xFFF59E0B),
                     iconBg = Color(0xFFF59E0B).copy(alpha = 0.14f),
@@ -504,7 +511,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             item {
                 SettingsHubCard(
                     title = strings.settingsDataTitle,
-                    subtitle = "JSON backup, local cache & attribution",
+                    subtitle = strings.settingsDataSubtitle,
                     icon = Icons.Filled.Shield,
                     iconTint = Color(0xFF94A3B8),
                     iconBg = Color(0xFF94A3B8).copy(alpha = 0.14f),
@@ -579,7 +586,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                                 .clickable {
                                                     modelEdit = p.defaultModel
                                                     baseUrlEdit = p.defaultBaseUrl
-                                                    viewModel.saveAndVerifyProviderKey(p, "", p.defaultModel, p.defaultBaseUrl)
+                                                    viewModel.switchProvider(p)
                                                 },
                                             shape = ZCalShapes.Pill,
                                             color = if (isSel) colors.accent else colors.surfaceVariant,
@@ -626,7 +633,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                                 color = colors.textPrimary
                                             )
                                             Text(
-                                                text = "Encrypted in hardware Keystore (AES-256-GCM)",
+                                                text = "Encrypted on device",
                                                 style = ZCalTypeScale.Label,
                                                 color = colors.textSecondary
                                             )
@@ -637,7 +644,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                 // Quick Model Presets
                                 Text(strings.quickModelPresets, style = ZCalTypeScale.BodySmall, color = colors.textSecondary)
                                 val quickModels = if (provider == AiProviderType.GEMINI) {
-                                    listOf("gemini-3.8-flash", "gemini-4-hydrogen", "gemini-2.5-flash", "auto")
+                                    listOf("gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "auto")
                                 } else {
                                     listOf("gpt-4o-mini", "gpt-4.1-mini", "auto")
                                 }
@@ -869,7 +876,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Text(
-                                            "Target: %,d kcal • %d g Protein • %d g Carbs • %d g Fat".format(
+                                            "%,d kcal · P %dg · C %dg · F %dg".format(
                                                 profile.calorieGoal,
                                                 profile.proteinGoalG,
                                                 profile.carbsGoalG,
@@ -879,7 +886,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                             color = colors.textPrimary
                                         )
                                         Text(
-                                            "CLA: %,d mg • Fiber: %d g".format(profile.claGoalMg, profile.fiberGoalG),
+                                            "CLA %,d mg · Fiber %dg".format(profile.claGoalMg, profile.fiberGoalG),
                                             style = ZCalTypeScale.Label,
                                             color = colors.textSecondary
                                         )
@@ -1125,12 +1132,12 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Text(
-                                            "Privacy Architecture",
+                                            "Privacy",
                                             style = ZCalTypeScale.BodySmall.copy(fontWeight = FontWeight.Bold),
                                             color = colors.textPrimary
                                         )
                                         Text(
-                                            "ZCal is an offline-first app. Your personal logs, body metrics, and encryption keys never leave your device. All API calls go directly to your configured provider.",
+                                            "Offline-first. Logs, metrics, and keys stay on your device. Requests go directly to your provider.",
                                             style = ZCalTypeScale.Label,
                                             color = colors.textSecondary
                                         )
@@ -1144,7 +1151,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                 )
 
                                 Text(
-                                    text = "ZCal v1.4.0 • Native Jetpack Compose",
+                                    text = "ZCal v1.4.5",
                                     style = ZCalTypeScale.Label,
                                     color = colors.accent
                                 )
